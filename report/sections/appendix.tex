@@ -1,8 +1,9 @@
 \section{Phụ lục: Cấu trúc mã nguồn và hướng dẫn tái tạo thực nghiệm}
+\label{appendix:reproducibility}
 
-Phụ lục này trình bày cấu trúc thư mục mã nguồn, vai trò của từng thành phần và hướng dẫn chạy lại các thực nghiệm trong báo cáo. Toàn bộ phần thực nghiệm được tổ chức trong thư mục \texttt{code/}.
+Phụ lục này trình bày cấu trúc thư mục mã nguồn, môi trường cài đặt và cách chạy lại các thực nghiệm trong báo cáo. Toàn bộ phần thực nghiệm được tổ chức trong thư mục \texttt{code/}.
 
-\subsection{Cấu trúc thư mục}
+\subsection{Cấu trúc mã nguồn}
 
 Cấu trúc thư mục chính của project như sau:
 
@@ -18,44 +19,21 @@ code/
 |-- run_main.py
 \end{lstlisting}
 
-Trong đó:
+Trong đó, \texttt{src/} chứa mã nguồn chính của chương trình, bao gồm các thành phần như sinh dữ liệu, tạo cặp ưu tiên, mô hình ranking tuyến tính, hàm mất mát, huấn luyện và đánh giá. Thư mục \texttt{experiments/} chứa các script phục vụ cho các thí nghiệm như thay đổi mức nhiễu hoặc kích thước mẫu. Thư mục \texttt{results/} lưu các kết quả đầu ra, bao gồm bảng kết quả và hình minh hoạ. Thư mục \texttt{tests/} chứa các kiểm thử cơ bản cho một số hàm quan trọng. File \texttt{requirements.txt} liệt kê các thư viện cần cài đặt, còn \texttt{README.md} mô tả ngắn gọn cách chạy lại project.
 
-\begin{itemize}
-    \item \texttt{experiments/}: chứa các script hoặc cấu hình phục vụ cho các thí nghiệm, chẳng hạn thí nghiệm chính, thí nghiệm thay đổi mức nhiễu và thí nghiệm thay đổi kích thước mẫu.
-    
-    \item \texttt{results/}: lưu kết quả đầu ra của quá trình thực nghiệm, bao gồm các bảng kết quả, file CSV và hình minh hoạ được sử dụng trong báo cáo.
-    
-    \item \texttt{src/}: chứa mã nguồn chính của chương trình, chẳng hạn các hàm sinh dữ liệu, mô hình ranking tuyến tính, hàm mất mát, hàm huấn luyện và các độ đo đánh giá.
-    
-    \item \texttt{tests/}: chứa các kiểm thử đơn giản nhằm đảm bảo các thành phần quan trọng như sinh cặp ưu tiên, tính loss và tính metric hoạt động đúng.
-    
-    \item \texttt{README.md}: mô tả ngắn gọn project, cách cài đặt môi trường và cách chạy chương trình.
-    
-    \item \texttt{requirements.txt}: liệt kê các thư viện Python cần thiết để chạy lại thực nghiệm.
-    
-    \item \texttt{run\_main.py}: script chạy thực nghiệm chính với thiết lập mặc định.
-    
-    \item \texttt{run\_experiments.py}: script chạy toàn bộ các thực nghiệm, bao gồm thí nghiệm chính, thí nghiệm theo mức nhiễu và thí nghiệm theo kích thước mẫu.
-\end{itemize}
+\subsection{Môi trường và cài đặt}
 
-\subsection{Môi trường thực nghiệm}
+Các thực nghiệm được cài đặt bằng Python. Các thư viện chính được sử dụng gồm \texttt{numpy} cho các phép toán vector và ma trận, \texttt{matplotlib} để vẽ hình, \texttt{csv} để lưu bảng kết quả và \texttt{pathlib} để quản lý đường dẫn.
 
-Các thực nghiệm được cài đặt bằng Python. Các thư viện chính được sử dụng gồm:
-
-\begin{itemize}
-    \item \texttt{numpy}: dùng cho các phép toán vector, ma trận, sinh dữ liệu và cập nhật trọng số.
-    \item \texttt{matplotlib}: dùng để vẽ các hình minh hoạ như đường cong loss, so sánh ranking và các biểu đồ thí nghiệm.
-    \item \texttt{csv}: dùng để lưu kết quả thực nghiệm dưới dạng bảng.
-    \item \texttt{pathlib}: dùng để quản lý đường dẫn thư mục và file.
-\end{itemize}
-
-Để cài đặt các thư viện cần thiết, chạy lệnh:
+Để cài đặt môi trường, di chuyển vào thư mục \texttt{code/} và chạy:
 
 \begin{lstlisting}[language=bash]
 pip install -r requirements.txt
 \end{lstlisting}
 
-\subsection{Cách chạy thực nghiệm chính}
+Nếu sử dụng môi trường ảo, có thể tạo và kích hoạt môi trường trước khi cài đặt thư viện để tránh xung đột phiên bản.
+
+\subsection{Cách chạy thực nghiệm}
 
 Để chạy thực nghiệm chính với cấu hình mặc định, sử dụng lệnh:
 
@@ -63,73 +41,30 @@ pip install -r requirements.txt
 python run_main.py
 \end{lstlisting}
 
-Script này thực hiện các bước sau:
+Script này sinh dữ liệu tổng hợp, tạo các cặp ưu tiên, khởi tạo mô hình scoring tuyến tính, huấn luyện bằng pairwise hinge loss, tính các metric đánh giá và lưu kết quả vào thư mục \texttt{results/}.
 
-\begin{enumerate}[label=\textbf{Bước \arabic*.}, leftmargin=*]
-    \item Sinh dữ liệu tổng hợp theo mô hình tuyến tính.
-    \item Sinh các cặp ưu tiên từ điểm xếp hạng thật.
-    \item Khởi tạo mô hình scoring tuyến tính.
-    \item Huấn luyện mô hình bằng pairwise hinge loss.
-    \item Tính các metric đánh giá như pairwise accuracy, ranking loss, Kendall tau distance và top-\(k\) overlap.
-    \item Lưu kết quả và hình minh hoạ vào thư mục \texttt{results/}.
-\end{enumerate}
-
-\subsection{Cách chạy toàn bộ thực nghiệm}
-
-Để chạy toàn bộ các thí nghiệm được trình bày trong báo cáo, sử dụng lệnh:
+Để chạy toàn bộ các thí nghiệm trong báo cáo, sử dụng lệnh:
 
 \begin{lstlisting}[language=bash]
 python run_experiments.py
 \end{lstlisting}
 
-Script này bao gồm ba nhóm thực nghiệm:
+Script này bao gồm thực nghiệm chính, thí nghiệm thay đổi mức nhiễu Gaussian và thí nghiệm thay đổi kích thước mẫu. Các thí nghiệm này được dùng để phân tích ảnh hưởng của nhiễu và số lượng dữ liệu đến chất lượng ranking.
 
-\begin{itemize}
-    \item \textbf{Thực nghiệm chính}: huấn luyện mô hình với thiết lập mặc định.
-    \item \textbf{Thí nghiệm theo mức nhiễu}: thay đổi độ lệch chuẩn của nhiễu Gaussian để kiểm tra ảnh hưởng của nhiễu đến chất lượng ranking.
-    \item \textbf{Thí nghiệm theo kích thước mẫu}: thay đổi số lượng mẫu huấn luyện để kiểm tra ảnh hưởng của kích thước dữ liệu.
-\end{itemize}
+\subsection{Kết quả đầu ra}
 
-Các kết quả sau khi chạy được lưu trong thư mục \texttt{results/}. Nếu các hình trong báo cáo được đặt trong thư mục \texttt{figures/}, có thể sao chép hoặc xuất các hình từ \texttt{results/} sang \texttt{figures/} để sử dụng trong file \LaTeX.
+Sau khi chạy thực nghiệm, chương trình tạo ra các bảng và hình trong thư mục \texttt{results/}. Các kết quả thường bao gồm bảng kết quả thực nghiệm chính, bảng kết quả khi thay đổi mức nhiễu, bảng kết quả khi thay đổi kích thước mẫu, đường cong pairwise hinge loss, hình so sánh ranking thật và ranking dự đoán, hình ảnh hưởng của nhiễu và hình ảnh hưởng của kích thước mẫu.
 
-\subsection{Các file kết quả}
+Các bảng kết quả được dùng để tạo bảng trong Section~9, còn các hình được dùng để minh hoạ quá trình hội tụ và phân tích chất lượng ranking.
 
-Sau khi chạy thực nghiệm, chương trình tạo ra các kết quả phục vụ cho phần báo cáo. Các file thường bao gồm:
+\subsection{Khả năng tái tạo và kiểm thử}
 
-\begin{itemize}
-    \item Bảng kết quả thực nghiệm chính.
-    \item Bảng kết quả khi thay đổi mức nhiễu.
-    \item Bảng kết quả khi thay đổi kích thước mẫu.
-    \item Hình đường cong pairwise hinge loss.
-    \item Hình so sánh ranking thật và ranking dự đoán.
-    \item Hình ảnh hưởng của nhiễu đến chất lượng ranking.
-    \item Hình ảnh hưởng của kích thước mẫu đến chất lượng ranking.
-\end{itemize}
+Để đảm bảo kết quả có thể tái tạo, chương trình sử dụng random seed cố định trong quá trình sinh dữ liệu và khởi tạo mô hình. Các tham số chính như số mẫu, số đặc trưng, learning rate, số epoch và hệ số regularization được đặt rõ trong các script thực nghiệm. Sai khác nhỏ có thể xuất hiện nếu phiên bản thư viện hoặc môi trường chạy khác nhau.
 
-Các bảng kết quả được dùng để tạo các bảng trong Section~9, còn các hình được dùng cho các minh hoạ như đường cong hội tụ và phân tích ảnh hưởng của tham số.
-
-\subsection{Khả năng tái tạo}
-
-Để đảm bảo kết quả có thể tái tạo, chương trình sử dụng random seed cố định trong quá trình sinh dữ liệu và khởi tạo mô hình. Các tham số chính của thực nghiệm, chẳng hạn số mẫu, số đặc trưng, learning rate, số epoch và hệ số regularization, được đặt rõ trong script thực nghiệm.
-
-Khi chạy lại trên cùng môi trường và cùng random seed, các kết quả thu được sẽ gần như trùng khớp với kết quả đã trình bày trong báo cáo. Sai khác nhỏ có thể xuất hiện nếu phiên bản thư viện hoặc môi trường chạy khác nhau.
-
-\subsection{Ghi chú về kiểm thử}
-
-Thư mục \texttt{tests/} được dùng để lưu các kiểm thử cơ bản cho mã nguồn. Các kiểm thử này giúp đảm bảo rằng:
-
-\begin{itemize}
-    \item hàm sinh cặp ưu tiên trả về đúng số lượng cặp;
-    \item nhãn cặp ưu tiên phù hợp với điểm xếp hạng thật;
-    \item pairwise hinge loss không âm;
-    \item ranking loss và pairwise accuracy có quan hệ đúng;
-    \item các metric trả về giá trị trong miền hợp lệ.
-\end{itemize}
-
-Nếu có cấu hình kiểm thử bằng \texttt{pytest}, có thể chạy:
+Thư mục \texttt{tests/} chứa các kiểm thử cơ bản cho mã nguồn, chẳng hạn kiểm tra số lượng cặp ưu tiên, tính đúng của nhãn cặp, tính không âm của pairwise hinge loss, quan hệ giữa ranking loss và pairwise accuracy, cũng như miền giá trị hợp lệ của các metric. Nếu project có cấu hình \texttt{pytest}, có thể chạy:
 
 \begin{lstlisting}[language=bash]
 pytest tests/
 \end{lstlisting}
 
-Nếu project không dùng \texttt{pytest}, phần kiểm thử có thể được chạy trực tiếp bằng các script Python trong thư mục \texttt{tests/}.
+Nếu không dùng \texttt{pytest}, các kiểm thử có thể được chạy trực tiếp bằng các script Python trong thư mục \texttt{tests/}.

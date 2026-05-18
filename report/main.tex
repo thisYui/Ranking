@@ -23,7 +23,7 @@
 \usepackage{tocloft}
 \usepackage{csquotes}
 \usepackage{tikz}
-\usetikzlibrary{arrows.meta, positioning, calc, matrix}
+\usetikzlibrary{arrows.meta, positioning, calc, matrix, decorations.pathreplacing}
 
 % ================== REFERENCES ==================
 \usepackage[
@@ -151,8 +151,14 @@ KHOA CÔNG NGHỆ THÔNG TIN
 \section*{Tóm tắt}
 \addcontentsline{toc}{section}{Tóm tắt}
 
-Báo cáo này trình bày chủ đề Ranking trong học máy, tập trung vào các khái niệm nền tảng như hàm điểm, quan hệ ưu tiên, ranking loss và các hướng tiếp cận pointwise, pairwise, listwise. Phần thực nghiệm lựa chọn pairwise ranking làm trọng tâm, trong đó mô hình scoring tuyến tính được cài đặt từ đầu bằng NumPy và huấn luyện bằng pairwise hinge loss trên dữ liệu tổng hợp. Các kết quả thực nghiệm được đánh giá thông qua pairwise accuracy, ranking loss và Kendall tau distance nhằm minh hoạ mối liên hệ giữa lý thuyết và thực hành.
+Báo cáo này trình bày chủ đề Ranking trong học máy dựa trên nội dung chương 	extit{Ranking} của sách 	extit{Foundations of Machine Learning}. Nội dung tập trung vào các khái niệm nền tảng như hàm điểm, quan hệ ưu tiên, ranking loss, margin trong ranking, score-based ranking, SVM-ranking, RankBoost, bipartite ranking, ROC/AUC và preference-based ranking. Bên cạnh phần lý thuyết, báo cáo cũng thảo luận các tiêu chí đánh giá ranking như pairwise accuracy, ranking loss, Kendall tau distance, AUC, MAP, MRR và NDCG.
 
+Phần thực nghiệm lựa chọn pairwise ranking làm trọng tâm. Nhóm cài đặt từ đầu một mô hình scoring tuyến tính bằng NumPy, huấn luyện bằng pairwise hinge loss trên dữ liệu tổng hợp, và đánh giá kết quả thông qua pairwise accuracy, ranking loss, Kendall tau distance và top-\(k\) overlap. Thực nghiệm nhằm minh hoạ mối liên hệ giữa lý thuyết ranking theo từng cặp và quá trình tối ưu mô hình trong thực hành.
+
+\newpage
+
+% ================== TABLE OF CONTENTS ==================
+\tableofcontents
 \newpage
 
 % ================== ABBREVIATIONS ==================
@@ -182,10 +188,6 @@ RR & Reciprocal Rank \\
 \end{tabular}
 \end{center}
 
-\newpage
-
-% ================== TABLE OF CONTENTS ==================
-\tableofcontents
 \newpage
 
 % ================== LIST OF FIGURES ==================

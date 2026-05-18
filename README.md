@@ -55,7 +55,7 @@ $$s_w(x) = w^T x$$
 
 Mô hình được huấn luyện bằng **pairwise hinge loss** trên dữ liệu tổng hợp:
 
-$$loss_ij(w) = max(0, 1 - y_ij * w^T(x_i - x_j))$$
+$$loss_{ij}(w) = \max(0, 1 - y_{ij} w^T(x_i - x_j))$$
 
 Pipeline thực nghiệm gồm:
 
