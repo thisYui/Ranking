@@ -9,6 +9,7 @@
 | 23120260 | Văn Đình Hiếu |
 
 **Môn học:** Nhập môn Học máy
+
 **Tên đề tài:** Ranking trong Học máy
 
 ---
@@ -48,15 +49,13 @@ Trong báo cáo, nhóm trình bày lại nội dung chính của chương Rankin
 
 Về thực nghiệm, nhóm cài đặt từ đầu một mô hình **pairwise learning-to-rank** bằng Python và NumPy. Mô hình sử dụng scoring tuyến tính:
 
-```text
-s_w(x) = w^T x
-```
+
+$$s_w(x) = w^T x$$
+
 
 Mô hình được huấn luyện bằng **pairwise hinge loss** trên dữ liệu tổng hợp:
 
-```text
-loss_ij(w) = max(0, 1 - y_ij * w^T(x_i - x_j))
-```
+$$loss_ij(w) = max(0, 1 - y_ij * w^T(x_i - x_j))$$
 
 Pipeline thực nghiệm gồm:
 
