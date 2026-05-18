@@ -1,0 +1,365 @@
+\section{Bipartite ranking, ROC và AUC}
+
+Các phần trước đã trình bày score-based ranking trong thiết lập tổng quát, nơi dữ liệu huấn luyện gồm các cặp đối tượng có nhãn ưu tiên. Trong phần này, ta xét một trường hợp đặc biệt nhưng rất quan trọng của ranking, gọi là \textit{bipartite ranking}. Đây là thiết lập trong đó các đối tượng được chia thành hai nhóm: positive và negative. Mục tiêu của mô hình là xếp các đối tượng positive cao hơn các đối tượng negative.
+
+Bipartite ranking có quan hệ chặt chẽ với binary classification, nhưng mục tiêu của hai bài toán khác nhau. Trong binary classification, ta muốn dự đoán đúng nhãn của từng điểm. Trong bipartite ranking, ta muốn tạo ra một thứ tự sao cho các điểm positive đứng trước các điểm negative. Một độ đo phổ biến cho thiết lập này là AUC, tức diện tích dưới đường cong ROC.
+
+\subsection{Thiết lập bipartite ranking}
+
+Gọi \(\mathcal{X}\) là không gian đầu vào. Trong bipartite ranking, tập dữ liệu được chia thành hai lớp rời nhau:
+\[
+    \mathcal{X}
+    =
+    \mathcal{X}_{+}
+    \cup
+    \mathcal{X}_{-},
+    \qquad
+    \mathcal{X}_{+}
+    \cap
+    \mathcal{X}_{-}
+    =
+    \varnothing.
+\]
+
+Các phần tử trong \(\mathcal{X}_{+}\) được gọi là positive points, còn các phần tử trong \(\mathcal{X}_{-}\) được gọi là negative points. Mục tiêu là học một hàm điểm
+\[
+    h:\mathcal{X}\rightarrow\mathbb{R},
+\]
+sao cho với mọi \(x^{+}\in\mathcal{X}_{+}\) và \(x^{-}\in\mathcal{X}_{-}\), ta mong muốn:
+\begin{equation}
+    h(x^{+}) > h(x^{-}).
+    \label{eq:section6-positive-above-negative}
+\end{equation}
+
+Điều kiện trong công thức~\eqref{eq:section6-positive-above-negative} nói rằng điểm positive nên được xếp cao hơn điểm negative. Đây là mục tiêu cốt lõi của bipartite ranking.
+
+\subsection{Lỗi tổng quát trong bipartite ranking}
+
+Gọi \(D_{+}\) là phân phối trên các điểm positive và \(D_{-}\) là phân phối trên các điểm negative. Lỗi tổng quát của một hàm điểm \(h\) được định nghĩa là xác suất một điểm negative được xếp cao hơn một điểm positive:
+\begin{equation}
+    R(h)
+    =
+    \Pr_{\substack{x^{+}\sim D_{+}\\x^{-}\sim D_{-}}}
+    \left[
+        h(x^{+}) < h(x^{-})
+    \right].
+    \label{eq:section6-bipartite-generalization-error}
+\end{equation}
+
+Công thức này đo trực tiếp lỗi ranking theo từng cặp positive-negative. Nếu \(R(h)\) nhỏ, điều đó có nghĩa là phần lớn các điểm positive được mô hình xếp cao hơn các điểm negative.
+
+Trong thực tế, có thể xảy ra trường hợp hoà điểm. Khi đó, một quy ước thường dùng là xem một cặp hoà điểm như nửa đúng, nửa sai:
+\[
+    R_{\mathrm{tie}}(h)
+    =
+    \Pr
+    \left[
+        h(x^{+}) < h(x^{-})
+    \right]
+    +
+    \frac{1}{2}
+    \Pr
+    \left[
+        h(x^{+}) = h(x^{-})
+    \right].
+\]
+
+\subsection{Lỗi thực nghiệm}
+
+Giả sử ta có tập positive:
+\[
+    S_{+}
+    =
+    \{x^{+}_{1},x^{+}_{2},\ldots,x^{+}_{m}\},
+\]
+và tập negative:
+\[
+    S_{-}
+    =
+    \{x^{-}_{1},x^{-}_{2},\ldots,x^{-}_{n}\}.
+\]
+
+Lỗi thực nghiệm của \(h\) là tỉ lệ các cặp positive-negative bị xếp sai:
+\begin{equation}
+    \widehat{R}(h)
+    =
+    \frac{1}{mn}
+    \sum_{i=1}^{m}
+    \sum_{j=1}^{n}
+    \mathbf{1}
+    \left[
+        h(x^{+}_{i}) < h(x^{-}_{j})
+    \right].
+    \label{eq:section6-bipartite-empirical-error}
+\end{equation}
+
+Nếu xử lý hoà điểm bằng hệ số \(1/2\), lỗi thực nghiệm có thể viết là:
+\[
+    \widehat{R}_{\mathrm{tie}}(h)
+    =
+    \frac{1}{mn}
+    \sum_{i=1}^{m}
+    \sum_{j=1}^{n}
+    \left(
+        \mathbf{1}
+        \left[
+            h(x^{+}_{i}) < h(x^{-}_{j})
+        \right]
+        +
+        \frac{1}{2}
+        \mathbf{1}
+        \left[
+            h(x^{+}_{i}) = h(x^{-}_{j})
+        \right]
+    \right).
+\]
+
+Công thức~\eqref{eq:section6-bipartite-empirical-error} cho thấy bipartite ranking là một bài toán pairwise: thay vì đánh giá từng điểm riêng lẻ, ta đánh giá tất cả các cặp gồm một positive point và một negative point.
+
+\subsection{So sánh binary classification và bipartite ranking}
+
+Binary classification và bipartite ranking đều làm việc với dữ liệu có hai lớp, nhưng mục tiêu tối ưu khác nhau. Binary classification dự đoán nhãn cho từng điểm, còn bipartite ranking quan tâm đến thứ tự tương đối giữa positive và negative points.
+
+Một classifier tốt chưa chắc tạo ra ranking tốt. Ví dụ, mô hình có thể phân loại đúng nhiều điểm, nhưng nếu một số negative points vẫn có điểm số cao hơn nhiều positive points, thì AUC có thể thấp dù accuracy cao. Ngược lại, một mô hình ranking tốt cần đảm bảo rằng điểm của positive points thường lớn hơn điểm của negative points.
+
+Do đó, binary classification là bài toán pointwise, còn bipartite ranking là bài toán pairwise. Sự khác biệt này giải thích vì sao các độ đo như accuracy, precision, recall thường dùng cho classification, trong khi AUC và ranking loss phù hợp hơn với bipartite ranking.
+
+\subsection{ROC curve}
+
+ROC là viết tắt của \textit{Receiver Operating Characteristic}. Với một hàm điểm \(h\), ta có thể biến \(h\) thành một classifier nhị phân bằng cách chọn một ngưỡng \(\theta\):
+\[
+    c_{\theta}(x)
+    =
+    \begin{cases}
+        +1, & \text{nếu } h(x)\geq \theta,\\
+        -1, & \text{nếu } h(x)<\theta.
+    \end{cases}
+\]
+
+Khi thay đổi ngưỡng \(\theta\), ta thu được nhiều classifier khác nhau. Với mỗi ngưỡng, ta tính hai đại lượng: true positive rate và false positive rate.
+
+True positive rate, hay TPR, là tỉ lệ positive points được dự đoán là positive:
+\begin{equation}
+    \mathrm{TPR}(\theta)
+    =
+    \Pr_{x^{+}\sim D_{+}}
+    \left[
+        h(x^{+})\geq \theta
+    \right].
+    \label{eq:section6-tpr}
+\end{equation}
+
+False positive rate, hay FPR, là tỉ lệ negative points bị dự đoán nhầm là positive:
+\begin{equation}
+    \mathrm{FPR}(\theta)
+    =
+    \Pr_{x^{-}\sim D_{-}}
+    \left[
+        h(x^{-})\geq \theta
+    \right].
+    \label{eq:section6-fpr}
+\end{equation}
+
+ROC curve là đường cong gồm các điểm
+\[
+    \left(
+        \mathrm{FPR}(\theta),
+        \mathrm{TPR}(\theta)
+    \right)
+\]
+khi ngưỡng \(\theta\) thay đổi trên toàn bộ miền giá trị điểm số. Một mô hình tốt sẽ đạt TPR cao trong khi giữ FPR thấp, nên đường ROC nằm gần góc trên bên trái. Nếu mô hình tương đương dự đoán ngẫu nhiên, ROC curve thường nằm gần đường chéo.
+
+\subsection{AUC}
+
+AUC là diện tích dưới ROC curve. Về mặt trực giác, AUC đo khả năng mô hình xếp một điểm positive cao hơn một điểm negative được chọn ngẫu nhiên. Cụ thể:
+\begin{equation}
+    \mathrm{AUC}(h)
+    =
+    \Pr_{\substack{x^{+}\sim D_{+}\\x^{-}\sim D_{-}}}
+    \left[
+        h(x^{+}) > h(x^{-})
+    \right]
+    +
+    \frac{1}{2}
+    \Pr_{\substack{x^{+}\sim D_{+}\\x^{-}\sim D_{-}}}
+    \left[
+        h(x^{+}) = h(x^{-})
+    \right].
+    \label{eq:section6-auc-pairwise}
+\end{equation}
+
+Nếu bỏ qua trường hợp hoà điểm, công thức trên trở thành:
+\[
+    \mathrm{AUC}(h)
+    =
+    \Pr
+    \left[
+        h(x^{+}) > h(x^{-})
+    \right].
+\]
+
+Vì vậy, AUC chính là xác suất một cặp positive-negative được xếp đúng. Đây là lý do AUC được xem là một độ đo tự nhiên cho bipartite ranking.
+
+\subsection{Quan hệ giữa AUC và ranking loss}
+
+Ta chứng minh quan hệ giữa AUC và ranking loss trong trường hợp không có hoà điểm. Từ định nghĩa lỗi tổng quát trong công thức~\eqref{eq:section6-bipartite-generalization-error}, ta có:
+\[
+    R(h)
+    =
+    \Pr
+    \left[
+        h(x^{+}) < h(x^{-})
+    \right].
+\]
+
+Mặt khác, khi không có hoà điểm:
+\[
+    \mathrm{AUC}(h)
+    =
+    \Pr
+    \left[
+        h(x^{+}) > h(x^{-})
+    \right].
+\]
+
+Với mỗi cặp \((x^{+},x^{-})\), do không có hoà điểm nên đúng một trong hai sự kiện sau xảy ra:
+\[
+    h(x^{+}) > h(x^{-})
+    \quad
+    \text{hoặc}
+    \quad
+    h(x^{+}) < h(x^{-}).
+\]
+
+Hai sự kiện này rời nhau và bao phủ toàn bộ không gian mẫu. Vì vậy, tổng xác suất của chúng bằng \(1\):
+\[
+    \Pr
+    \left[
+        h(x^{+}) > h(x^{-})
+    \right]
+    +
+    \Pr
+    \left[
+        h(x^{+}) < h(x^{-})
+    \right]
+    =
+    1.
+\]
+
+Thay hai định nghĩa ở trên vào, ta thu được:
+\begin{equation}
+    \mathrm{AUC}(h)
+    =
+    1-R(h).
+    \label{eq:section6-auc-one-minus-error}
+\end{equation}
+
+Tương tự, trên mẫu hữu hạn, nếu không có hoà điểm thì:
+\[
+    \widehat{\mathrm{AUC}}(h)
+    =
+    1-\widehat{R}(h).
+\]
+
+Nếu có hoà điểm, ta dùng quy ước hoà điểm đóng góp \(1/2\) vào AUC và \(1/2\) vào lỗi. Khi đó quan hệ tương tự vẫn đúng nếu lỗi ranking được định nghĩa có tính phần hoà điểm như trong \(\widehat{R}_{\mathrm{tie}}(h)\).
+
+\subsection{Cách tính AUC trên mẫu hữu hạn}
+
+Với mẫu positive \(S_{+}\) kích thước \(m\) và mẫu negative \(S_{-}\) kích thước \(n\), AUC thực nghiệm được tính bởi:
+\begin{equation}
+    \widehat{\mathrm{AUC}}(h)
+    =
+    \frac{1}{mn}
+    \sum_{i=1}^{m}
+    \sum_{j=1}^{n}
+    \left(
+        \mathbf{1}
+        \left[
+            h(x_i^{+}) > h(x_j^{-})
+        \right]
+        +
+        \frac{1}{2}
+        \mathbf{1}
+        \left[
+            h(x_i^{+}) = h(x_j^{-})
+        \right]
+    \right).
+    \label{eq:section6-empirical-auc}
+\end{equation}
+
+Công thức~\eqref{eq:section6-empirical-auc} có diễn giải đơn giản: duyệt qua tất cả các cặp positive-negative, đếm số cặp được xếp đúng, và chia cho tổng số cặp \(mn\). Cặp hoà điểm được tính nửa điểm.
+
+\subsection{Ví dụ minh hoạ cách tính AUC}
+
+Xét hai điểm positive và ba điểm negative với điểm số:
+\[
+    h(x_1^{+})=0.9,
+    \qquad
+    h(x_2^{+})=0.6,
+\]
+và:
+\[
+    h(x_1^{-})=0.8,
+    \qquad
+    h(x_2^{-})=0.4,
+    \qquad
+    h(x_3^{-})=0.3.
+\]
+
+Tổng số cặp positive-negative là:
+\[
+    mn=2\cdot 3=6.
+\]
+
+Với \(x_1^{+}\), ta có \(0.9>0.8\), \(0.9>0.4\), và \(0.9>0.3\), nên điểm này thắng cả ba negative points. Với \(x_2^{+}\), ta có \(0.6<0.8\), nhưng \(0.6>0.4\) và \(0.6>0.3\), nên điểm này thắng hai trong ba negative points.
+
+Do đó, tổng số cặp được xếp đúng là \(3+2=5\). AUC thực nghiệm là:
+\[
+    \widehat{\mathrm{AUC}}(h)
+    =
+    \frac{5}{6}
+    \approx
+    0.833.
+\]
+
+Lỗi bipartite ranking tương ứng là:
+\[
+    \widehat{R}(h)
+    =
+    1-\widehat{\mathrm{AUC}}(h)
+    =
+    \frac{1}{6}.
+\]
+
+Ví dụ này cho thấy AUC có thể được hiểu hoàn toàn theo nghĩa pairwise: mô hình càng xếp nhiều cặp positive-negative đúng thì AUC càng cao.
+
+\subsection{[MỞ RỘNG] Phân tích độ phức tạp tính AUC}
+
+Nếu tính AUC trực tiếp theo công thức~\eqref{eq:section6-empirical-auc}, ta cần duyệt qua toàn bộ \(mn\) cặp positive-negative. Do đó, độ phức tạp thời gian là:
+\[
+    O(mn).
+\]
+
+Khi \(m\) và \(n\) lớn, cách tính trực tiếp có thể tốn kém. Một cách hiệu quả hơn là sắp xếp toàn bộ \(m+n\) điểm theo điểm số \(h(x)\), sau đó dùng thứ hạng để tính AUC. Chi phí sắp xếp là:
+\[
+    O((m+n)\log(m+n)).
+\]
+
+Sau khi sắp xếp, ta có thể duyệt danh sách một lần để đếm số cặp positive-negative được xếp đúng, với chi phí \(O(m+n)\). Vì vậy, tổng chi phí của cách tính dựa trên sắp xếp là:
+\[
+    O((m+n)\log(m+n)).
+\]
+
+Cách tính này hiệu quả hơn \(O(mn)\) khi cả hai lớp đều có nhiều điểm.
+
+\subsection{Liên hệ với các thuật toán ranking}
+
+Bipartite ranking là một trường hợp đặc biệt của score-based ranking. Thay vì có nhãn ưu tiên tuỳ ý giữa các cặp, ta chỉ xét các cặp gồm một positive point và một negative point. Với mỗi cặp \((x^{-},x^{+})\), ta có thể gán nhãn \(y=+1\), vì \(x^{+}\) nên được xếp cao hơn \(x^{-}\).
+
+Do đó, các thuật toán pairwise như SVM-ranking hoặc RankBoost có thể được áp dụng cho bipartite ranking. Tuy nhiên, cấu trúc positive-negative giúp bài toán có dạng đơn giản hơn, đồng thời cho phép đánh giá trực tiếp bằng AUC.
+
+\subsection{Tóm tắt}
+
+Phần này đã trình bày bipartite ranking, một trường hợp quan trọng của ranking trong đó các đối tượng được chia thành hai lớp positive và negative. Mục tiêu của bài toán là học một hàm điểm sao cho positive points được xếp cao hơn negative points. Ta đã định nghĩa lỗi tổng quát, lỗi thực nghiệm, ROC curve và AUC.
+
+Kết quả quan trọng là AUC có thể được hiểu như xác suất một điểm positive được xếp cao hơn một điểm negative được chọn ngẫu nhiên. Trong trường hợp không có hoà điểm, AUC bằng \(1\) trừ đi ranking loss. Phân tích này cho thấy AUC là một độ đo tự nhiên cho bipartite ranking và đóng vai trò cầu nối giữa lý thuyết ranking và các ứng dụng phân loại hai lớp.

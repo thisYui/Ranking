@@ -1,0 +1,403 @@
+\section{Score-based ranking và chặn tổng quát hoá}
+
+Trong phần trước, ta đã giới thiệu các khái niệm cơ bản của bài toán ranking như hàm điểm, quan hệ ưu tiên theo từng cặp, lỗi xếp hạng và margin. Phần này tập trung vào thiết lập \textit{score-based ranking}. Trong thiết lập này, mô hình học một hàm điểm
+\[
+    h:\mathcal{X}\rightarrow\mathbb{R},
+\]
+sau đó sinh ranking bằng cách sắp xếp các đối tượng theo điểm số.
+
+Mục tiêu chính của phần này là trình bày chặn tổng quát hoá dựa trên margin cho bài toán ranking. Kết quả này cho thấy nếu một hàm điểm có lỗi margin nhỏ trên tập huấn luyện và lớp giả thuyết không quá phức tạp, thì lỗi xếp hạng trên dữ liệu chưa thấy cũng có thể được kiểm soát.
+
+\subsection{Thiết lập score-based ranking}
+
+Gọi \(\mathcal{X}\) là không gian đầu vào. Trong score-based ranking, ta xét một lớp giả thuyết gồm các hàm điểm:
+\[
+    \mathcal{H}
+    \subseteq
+    \{h \mid h:\mathcal{X}\rightarrow\mathbb{R}\}.
+\]
+
+Với \(h\in\mathcal{H}\), giá trị \(h(x)\) là điểm số của đối tượng \(x\). Nếu
+\[
+    h(x')>h(x),
+\]
+thì mô hình xếp \(x'\) cao hơn \(x\).
+
+Dữ liệu huấn luyện gồm \(m\) cặp đối tượng có nhãn:
+\[
+    S =
+    \big((x_1,x'_1,y_1),\ldots,(x_m,x'_m,y_m)\big),
+    \qquad
+    y_i\in\{-1,0,+1\}.
+\]
+
+Các cặp \((x_i,x'_i)\) được lấy từ một phân phối chưa biết \(D\) trên \(\mathcal{X}\times\mathcal{X}\). Nhãn được xác định bởi hàm ưu tiên mục tiêu
+\[
+    f:\mathcal{X}\times\mathcal{X}\rightarrow\{-1,0,+1\}.
+\]
+
+Theo quy ước, \(f(x,x')=+1\) nghĩa là \(x'\) được ưu tiên hơn \(x\), \(f(x,x')=-1\) nghĩa là \(x\) được ưu tiên hơn \(x'\), và \(f(x,x')=0\) nghĩa là hai đối tượng ngang nhau hoặc không có đủ thông tin. Với một cặp có nhãn khác \(0\), hàm điểm \(h\) xếp đúng nếu
+\begin{equation}
+    f(x,x')\big(h(x')-h(x)\big)>0.
+    \label{eq:section3-correct-ranking-condition}
+\end{equation}
+
+Nếu biểu thức trên nhỏ hơn hoặc bằng \(0\), mô hình xếp sai hoặc không phân biệt được đúng thứ tự giữa hai đối tượng.
+
+\subsection{Lỗi tổng quát và lỗi thực nghiệm}
+
+Lỗi tổng quát của hàm điểm \(h\) là xác suất mô hình xếp sai một cặp được lấy ngẫu nhiên từ phân phối \(D\):
+\begin{equation}
+    R(h)
+    =
+    \Pr_{(x,x')\sim D}
+    \left[
+        f(x,x')\neq 0
+        \ \wedge\
+        f(x,x')\big(h(x')-h(x)\big)\leq 0
+    \right].
+    \label{eq:section3-generalization-error}
+\end{equation}
+
+Đại lượng \(R(h)\) là lỗi thật mà ta quan tâm, vì nó đo chất lượng ranking trên dữ liệu chưa thấy. Tuy nhiên, do phân phối \(D\) và hàm mục tiêu \(f\) không được biết đầy đủ, ta dùng lỗi thực nghiệm trên mẫu huấn luyện:
+\begin{equation}
+    \widehat{R}(h)
+    =
+    \frac{1}{m}
+    \sum_{i=1}^{m}
+    \mathbf{1}
+    \left[
+        y_i\neq 0
+        \ \wedge\
+        y_i\big(h(x'_i)-h(x_i)\big)\leq 0
+    \right].
+    \label{eq:section3-empirical-error}
+\end{equation}
+
+Để đơn giản hoá phân tích lý thuyết, phần này thường giả sử nhãn chỉ thuộc \(\{-1,+1\}\), tức là mỗi cặp đều có một quan hệ ưu tiên rõ ràng. Khi đó, điều kiện \(y_i\neq 0\) có thể được bỏ đi trong công thức lỗi thực nghiệm.
+
+\subsection{Margin loss cho ranking}
+
+Trong ranking, việc một cặp được xếp đúng chưa hẳn đã đủ. Ta còn muốn mô hình xếp đúng với một khoảng cách điểm đủ lớn. Với một cặp huấn luyện \((x_i,x'_i,y_i)\), margin theo cặp được định nghĩa là:
+\begin{equation}
+    M_i(h)
+    =
+    y_i\big(h(x'_i)-h(x_i)\big).
+    \label{eq:section3-pairwise-margin}
+\end{equation}
+
+Nếu \(M_i(h)>0\), cặp thứ \(i\) được xếp đúng. Nếu \(M_i(h)\leq 0\), cặp đó bị xếp sai. Với một tham số \(\rho>0\), ta định nghĩa hàm mất mát margin:
+\begin{equation}
+    \Phi_{\rho}(u)
+    =
+    \begin{cases}
+        1, & u\leq 0,\\[0.15cm]
+        1-\dfrac{u}{\rho}, & 0<u<\rho,\\[0.25cm]
+        0, & u\geq \rho.
+    \end{cases}
+    \label{eq:section3-margin-loss-function}
+\end{equation}
+
+Hàm \(\Phi_{\rho}\) phạt các cặp bị xếp sai, đồng thời cũng phạt các cặp được xếp đúng nhưng margin nhỏ hơn \(\rho\). Lỗi margin thực nghiệm được định nghĩa bởi:
+\begin{equation}
+    \widehat{R}_{\rho}(h)
+    =
+    \frac{1}{m}
+    \sum_{i=1}^{m}
+    \Phi_{\rho}
+    \left(
+        y_i\big(h(x'_i)-h(x_i)\big)
+    \right).
+    \label{eq:section3-empirical-margin-loss}
+\end{equation}
+
+Vì
+\[
+    \mathbf{1}[u\leq 0]\leq \Phi_{\rho}(u),
+\]
+nên lỗi thực nghiệm dạng chỉ thị luôn được chặn trên bởi lỗi margin:
+\[
+    \widehat{R}(h)\leq \widehat{R}_{\rho}(h).
+\]
+
+Điều này cho phép ta phân tích ranking thông qua một hàm mất mát mềm hơn và thuận tiện hơn cho việc xây dựng chặn tổng quát hoá.
+
+\subsection{Rademacher complexity}
+
+Để đo độ phức tạp của lớp giả thuyết \(\mathcal{H}\), ta sử dụng Rademacher complexity. Trực giác, Rademacher complexity đo khả năng một lớp hàm có thể khớp với nhiễu ngẫu nhiên. Một lớp hàm có độ phức tạp cao thường dễ overfit hơn.
+
+Với một mẫu \(S=(z_1,\ldots,z_m)\), empirical Rademacher complexity của một lớp hàm \(\mathcal{G}\) được định nghĩa là:
+\begin{equation}
+    \widehat{\mathfrak{R}}_{S}(\mathcal{G})
+    =
+    \mathbb{E}_{\sigma}
+    \left[
+        \sup_{g\in\mathcal{G}}
+        \frac{1}{m}
+        \sum_{i=1}^{m}
+        \sigma_i g(z_i)
+    \right],
+    \label{eq:section3-empirical-rademacher}
+\end{equation}
+trong đó \(\sigma_1,\ldots,\sigma_m\) là các biến Rademacher độc lập, nhận giá trị \(+1\) hoặc \(-1\) với xác suất bằng nhau.
+
+Trong bài toán ranking, mỗi mẫu là một cặp \((x_i,x'_i)\). Ta ký hiệu \(D_1\) là phân phối biên của phần tử thứ nhất \(x\), và \(D_2\) là phân phối biên của phần tử thứ hai \(x'\). Tương ứng, ta xét hai đại lượng:
+\[
+    \mathfrak{R}^{D_1}_m(\mathcal{H}),
+    \qquad
+    \mathfrak{R}^{D_2}_m(\mathcal{H}).
+\]
+
+Hai đại lượng này xuất hiện trong chặn tổng quát hoá vì hàm điểm được đánh giá trên cả hai phần tử của mỗi cặp.
+
+\subsection{Định lý chặn margin cho ranking}
+
+Ta phát biểu kết quả chặn tổng quát hoá chính cho score-based ranking.
+
+\paragraph{Định lý 3.1.}
+Cho \(\mathcal{H}\) là một lớp các hàm thực trên \(\mathcal{X}\). Cố định \(\rho>0\). Khi đó, với mọi \(\delta>0\), với xác suất ít nhất \(1-\delta\) theo việc chọn mẫu \(S\) kích thước \(m\), bất đẳng thức sau đúng đồng thời với mọi \(h\in\mathcal{H}\):
+\begin{equation}
+    R(h)
+    \leq
+    \widehat{R}_{\rho}(h)
+    +
+    \frac{2}{\rho}
+    \left(
+        \mathfrak{R}^{D_1}_m(\mathcal{H})
+        +
+        \mathfrak{R}^{D_2}_m(\mathcal{H})
+    \right)
+    +
+    \sqrt{
+        \frac{\log(1/\delta)}{2m}
+    }.
+    \label{eq:section3-margin-bound-expected}
+\end{equation}
+
+Ngoài ra, ta cũng có dạng chặn theo empirical Rademacher complexity:
+\begin{equation}
+    R(h)
+    \leq
+    \widehat{R}_{\rho}(h)
+    +
+    \frac{2}{\rho}
+    \left(
+        \widehat{\mathfrak{R}}_{S_1}(\mathcal{H})
+        +
+        \widehat{\mathfrak{R}}_{S_2}(\mathcal{H})
+    \right)
+    +
+    3
+    \sqrt{
+        \frac{\log(2/\delta)}{2m}
+    }.
+    \label{eq:section3-margin-bound-empirical}
+\end{equation}
+
+Chặn trên gồm ba thành phần. Thành phần thứ nhất là lỗi margin thực nghiệm \(\widehat{R}_{\rho}(h)\). Thành phần thứ hai phụ thuộc vào độ phức tạp của lớp giả thuyết \(\mathcal{H}\). Thành phần thứ ba phụ thuộc vào kích thước mẫu \(m\) và mức tin cậy \(\delta\).
+
+Định lý cho thấy để lỗi tổng quát \(R(h)\) nhỏ, ta cần đồng thời giảm lỗi margin thực nghiệm và kiểm soát độ phức tạp của lớp giả thuyết. Tham số \(\rho\) tạo ra một sự đánh đổi: nếu \(\rho\) lớn, yêu cầu margin nghiêm ngặt hơn nên lỗi margin thực nghiệm có thể tăng; nếu \(\rho\) nhỏ, hệ số \(1/\rho\) trong thành phần độ phức tạp lại tăng.
+
+\subsection{Chứng minh Định lý 3.1}
+
+Ta chỉ trình bày ý tưởng chính của chứng minh. Đầu tiên, định nghĩa lớp hàm margin theo cặp:
+\[
+    \mathcal{H}_{\Delta}
+    =
+    \left\{
+        ((x,x'),y)
+        \mapsto
+        y\big(h(x')-h(x)\big)
+        \mid
+        h\in\mathcal{H}
+    \right\}.
+\]
+
+Sau đó, xét lớp hàm sau khi ghép với margin loss:
+\[
+    \Phi_{\rho}\circ\mathcal{H}_{\Delta}
+    =
+    \left\{
+        ((x,x'),y)
+        \mapsto
+        \Phi_{\rho}
+        \left(
+            y\big(h(x')-h(x)\big)
+        \right)
+        \mid
+        h\in\mathcal{H}
+    \right\}.
+\]
+
+Vì lớp này nhận giá trị trong \([0,1]\), ta có thể áp dụng chặn tổng quát hoá bằng Rademacher complexity:
+\[
+    R(h)
+    \leq
+    \widehat{R}_{\rho}(h)
+    +
+    2
+    \mathfrak{R}_m
+    \left(
+        \Phi_{\rho}\circ\mathcal{H}_{\Delta}
+    \right)
+    +
+    \sqrt{
+        \frac{\log(1/\delta)}{2m}
+    }.
+\]
+
+Do \(\Phi_{\rho}\) là hàm \(1/\rho\)-Lipschitz, theo tính chất contraction của Rademacher complexity:
+\[
+    \mathfrak{R}_m
+    \left(
+        \Phi_{\rho}\circ\mathcal{H}_{\Delta}
+    \right)
+    \leq
+    \frac{1}{\rho}
+    \mathfrak{R}_m(\mathcal{H}_{\Delta}).
+\]
+
+Mặt khác, vì mỗi hàm trong \(\mathcal{H}_{\Delta}\) có dạng hiệu \(h(x')-h(x)\), nên độ phức tạp của lớp này được chặn bởi tổng độ phức tạp trên hai phân phối biên:
+\[
+    \mathfrak{R}_m(\mathcal{H}_{\Delta})
+    \leq
+    \mathfrak{R}^{D_1}_m(\mathcal{H})
+    +
+    \mathfrak{R}^{D_2}_m(\mathcal{H}).
+\]
+
+Thay hai chặn trên vào nhau, ta thu được bất đẳng thức trong Định lý 3.1.
+
+\subsection{[MỞ RỘNG] Giải thích bước Lipschitz của \texorpdfstring{\(\Phi_{\rho}\)}{Phi rho}}
+
+Từ định nghĩa của \(\Phi_{\rho}\), ta thấy hàm này là hằng số trên \((-\infty,0]\), giảm tuyến tính trên \((0,\rho)\), và lại là hằng số trên \([\rho,+\infty)\). Trên đoạn giữa, độ dốc của hàm là
+\[
+    -\frac{1}{\rho}.
+\]
+
+Do đó, với mọi \(u,v\in\mathbb{R}\), ta có:
+\[
+    |\Phi_{\rho}(u)-\Phi_{\rho}(v)|
+    \leq
+    \frac{1}{\rho}|u-v|.
+\]
+
+Vì vậy, \(\Phi_{\rho}\) là hàm \(1/\rho\)-Lipschitz. Đây là lý do trong bước contraction, Rademacher complexity của lớp sau khi ghép với \(\Phi_{\rho}\) được nhân với hệ số \(1/\rho\).
+
+\subsection{Hệ quả cho lớp hàm kernel}
+
+Một hệ quả quan trọng của Định lý 3.1 là chặn tổng quát hoá cho lớp hàm kernel. Giả sử \(K:\mathcal{X}\times\mathcal{X}\rightarrow\mathbb{R}\) là một kernel xác định dương, \(\Phi:\mathcal{X}\rightarrow\mathcal{F}\) là ánh xạ đặc trưng tương ứng, và xét lớp giả thuyết:
+\[
+    \mathcal{H}
+    =
+    \left\{
+        x\mapsto w\cdot \Phi(x)
+        \mid
+        \|w\|_{\mathcal{F}}\leq \Lambda
+    \right\}.
+\]
+
+Đặt
+\[
+    r=\sup_{x\in\mathcal{X}}K(x,x).
+\]
+
+Khi đó, với xác suất ít nhất \(1-\delta\), với mọi \(h\in\mathcal{H}\), ta có:
+\begin{equation}
+    R(h)
+    \leq
+    \widehat{R}_{\rho}(h)
+    +
+    4
+    \sqrt{
+        \frac{r^2\Lambda^2}{\rho^2 m}
+    }
+    +
+    \sqrt{
+        \frac{\log(1/\delta)}{2m}
+    }.
+    \label{eq:section3-kernel-margin-bound}
+\end{equation}
+
+Chặn này đáng chú ý vì nó không phụ thuộc trực tiếp vào số chiều của không gian đặc trưng \(\mathcal{F}\). Thay vào đó, nó phụ thuộc vào margin \(\rho\), kích thước mẫu \(m\), cận \(r\) của kernel và chuẩn của vector trọng số thông qua \(\Lambda\).
+
+\subsection{[MỞ RỘNG] Phân tích độ phức tạp của score-based ranking}
+
+Ranking theo từng cặp có thể tốn kém vì số lượng cặp tăng nhanh theo số đối tượng. Nếu có \(n\) đối tượng và xét tất cả các cặp không lặp, số lượng cặp là:
+\begin{equation}
+    |\mathcal{P}|
+    =
+    \binom{n}{2}
+    =
+    \frac{n(n-1)}{2}
+    =
+    O(n^2).
+    \label{eq:section3-number-of-pairs}
+\end{equation}
+
+Với mô hình tuyến tính \(h_w(x)=w^\top x\), chi phí tính điểm cho \(n\) đối tượng là \(O(nd)\), và chi phí sắp xếp để tạo ranking là \(O(n\log n)\). Do đó, chi phí suy luận là:
+\[
+    O(nd+n\log n).
+\]
+
+Nếu huấn luyện trực tiếp trên toàn bộ các cặp, mỗi cặp cần tính hiệu điểm
+\[
+    h_w(x_j)-h_w(x_i)=w^\top(x_j-x_i),
+\]
+có chi phí \(O(d)\). Vì vậy, chi phí cho một epoch huấn luyện là:
+\[
+    O(n^2d).
+\]
+
+Phân tích này cho thấy pairwise ranking có thể trở nên tốn kém với tập dữ liệu lớn. Trong thực tế, người ta thường dùng lấy mẫu cặp, mini-batch training hoặc các kỹ thuật tối ưu chuyên biệt để giảm chi phí.
+
+\subsection{Ví dụ minh hoạ về margin}
+
+Xét ba tài liệu \(d_1,d_2,d_3\) với thứ tự đúng:
+\[
+    d_1 \succ d_2 \succ d_3.
+\]
+
+Giả sử mô hình dự đoán điểm:
+\[
+    h(d_1)=2.0,
+    \qquad
+    h(d_2)=1.2,
+    \qquad
+    h(d_3)=1.1.
+\]
+
+Với cặp \((d_2,d_1)\), margin là:
+\[
+    M_{21}(h)
+    =
+    h(d_1)-h(d_2)
+    =
+    0.8.
+\]
+
+Với cặp \((d_3,d_2)\), margin là:
+\[
+    M_{32}(h)
+    =
+    h(d_2)-h(d_3)
+    =
+    0.1.
+\]
+
+Cả hai cặp đều được xếp đúng vì margin dương. Tuy nhiên, nếu chọn \(\rho=0.5\), cặp \((d_3,d_2)\) vẫn bị phạt bởi margin loss vì margin chỉ bằng \(0.1\), nhỏ hơn \(\rho\):
+\[
+    \Phi_{0.5}(0.1)
+    =
+    1-\frac{0.1}{0.5}
+    =
+    0.8.
+\]
+
+Ví dụ này cho thấy margin loss không chỉ quan tâm đến việc xếp đúng hay sai, mà còn quan tâm đến mức độ chắc chắn của thứ tự được dự đoán.
+
+\subsection{Tóm tắt}
+
+Phần này đã trình bày thiết lập score-based ranking, trong đó mô hình học một hàm điểm \(h:\mathcal{X}\rightarrow\mathbb{R}\) và dùng hàm này để sinh thứ tự xếp hạng. Ta đã định nghĩa lỗi tổng quát, lỗi thực nghiệm, margin theo cặp và lỗi margin thực nghiệm. Kết quả chính là chặn tổng quát hoá dựa trên Rademacher complexity, cho thấy lỗi ranking có thể được kiểm soát thông qua lỗi margin thực nghiệm và độ phức tạp của lớp giả thuyết.
+
+Các kết quả trên cũng giải thích vì sao các thuật toán ranking dựa trên margin thường tìm một hàm điểm vừa có lỗi margin nhỏ, vừa có độ phức tạp được kiểm soát. Đây là cơ sở tự nhiên dẫn đến các phương pháp như Ranking SVM ở phần tiếp theo.

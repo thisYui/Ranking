@@ -1,0 +1,540 @@
+\section{RankBoost}
+
+Trong các phần trước, ta đã trình bày score-based ranking và thuật toán ranking dựa trên SVM. Một hướng tiếp cận khác trong score-based ranking là sử dụng boosting. Phần này trình bày RankBoost, một thuật toán boosting được thiết kế cho bài toán ranking theo từng cặp.
+
+Tương tự AdaBoost trong phân loại nhị phân, RankBoost kết hợp nhiều mô hình yếu, gọi là \textit{base rankers}, để tạo thành một hàm ranking mạnh hơn. Khác với AdaBoost, RankBoost duy trì phân phối trọng số trên các cặp đối tượng. Các cặp bị xếp sai ở những vòng trước sẽ được tăng trọng số, khiến thuật toán tập trung nhiều hơn vào các cặp khó ở những vòng sau.
+
+\subsection{Thiết lập của RankBoost}
+
+Giả sử tập huấn luyện gồm \(m\) cặp có nhãn:
+\[
+    S =
+    \big((x_1,x'_1,y_1),\ldots,(x_m,x'_m,y_m)\big),
+    \qquad
+    y_i\in\{-1,0,+1\}.
+\]
+
+Theo quy ước, \(y_i=+1\) nghĩa là \(x'_i\) được ưu tiên hơn \(x_i\), \(y_i=-1\) nghĩa là \(x_i\) được ưu tiên hơn \(x'_i\), và \(y_i=0\) nghĩa là hai đối tượng ngang nhau hoặc không có thông tin ưu tiên rõ ràng. Để đơn giản, ta giả sử các cặp có nhãn \(0\) đã được loại bỏ, tức là:
+\[
+    y_i\neq 0,
+    \qquad i=1,\ldots,m.
+\]
+
+RankBoost sử dụng một tập các base rankers:
+\[
+    \mathcal{H}
+    =
+    \{h:\mathcal{X}\rightarrow\{0,1\}\}.
+\]
+
+Mỗi base ranker \(h_t\in\mathcal{H}\) gán cho mỗi đối tượng một giá trị trong \(\{0,1\}\). Sau \(T\) vòng, RankBoost trả về hàm điểm:
+\begin{equation}
+    g(x)
+    =
+    \sum_{t=1}^{T}
+    \alpha_t h_t(x),
+    \label{eq:section5-final-ranker}
+\end{equation}
+trong đó \(\alpha_t\geq 0\) là trọng số của base ranker \(h_t\). Ranking cuối cùng được sinh ra bằng cách sắp xếp các đối tượng theo giá trị \(g(x)\).
+
+\subsection{Ý tưởng lặp của RankBoost}
+
+RankBoost hoạt động theo từng vòng. Tại vòng \(t\), thuật toán duy trì một phân phối trọng số \(D_t\) trên các cặp huấn luyện. Sau đó, thuật toán chọn một base ranker \(h_t\) tốt đối với phân phối hiện tại, tính trọng số \(\alpha_t\), rồi cập nhật phân phối thành \(D_{t+1}\).
+
+Trực giác của bước cập nhật là: các cặp được xếp đúng sẽ giảm trọng số tương đối, còn các cặp bị xếp sai sẽ tăng trọng số tương đối. Vì vậy, ở các vòng sau, thuật toán tập trung nhiều hơn vào các cặp khó.
+
+\subsection{Phân phối trọng số trên các cặp}
+
+RankBoost duy trì một phân phối \(D_t\) trên các cặp huấn luyện:
+\[
+    D_t(i)\geq 0,
+    \qquad
+    \sum_{i=1}^{m}D_t(i)=1.
+\]
+
+Ban đầu, mọi cặp được gán trọng số bằng nhau:
+\[
+    D_1(i)=\frac{1}{m},
+    \qquad
+    i=1,\ldots,m.
+\]
+
+Tại mỗi vòng \(t\), với một cặp \((x_i,x'_i,y_i)\), base ranker \(h_t\) xếp đúng nếu:
+\[
+    y_i\big(h_t(x'_i)-h_t(x_i)\big)>0.
+\]
+
+Nó xếp sai nếu biểu thức trên nhỏ hơn \(0\), và không phân biệt được cặp đó nếu biểu thức bằng \(0\).
+
+\subsection{Các đại lượng \texorpdfstring{\(\epsilon_t^+\), \(\epsilon_t^-\), \(\epsilon_t^0\)}{epsilon}}
+
+Tại vòng \(t\), với phân phối \(D_t\), ta định nghĩa:
+\begin{equation}
+    \epsilon_t^{+}
+    =
+    \sum_{i=1}^{m}
+    D_t(i)
+    \mathbf{1}
+    \left[
+        y_i\big(h_t(x'_i)-h_t(x_i)\big)=+1
+    \right],
+    \label{eq:section5-epsilon-plus}
+\end{equation}
+\begin{equation}
+    \epsilon_t^{-}
+    =
+    \sum_{i=1}^{m}
+    D_t(i)
+    \mathbf{1}
+    \left[
+        y_i\big(h_t(x'_i)-h_t(x_i)\big)=-1
+    \right],
+    \label{eq:section5-epsilon-minus}
+\end{equation}
+và:
+\begin{equation}
+    \epsilon_t^{0}
+    =
+    \sum_{i=1}^{m}
+    D_t(i)
+    \mathbf{1}
+    \left[
+        y_i\big(h_t(x'_i)-h_t(x_i)\big)=0
+    \right].
+    \label{eq:section5-epsilon-zero}
+\end{equation}
+
+Ba đại lượng này lần lượt là tổng trọng số của các cặp được xếp đúng, xếp sai và không được phân biệt bởi \(h_t\). Ta có:
+\[
+    \epsilon_t^{+}
+    +
+    \epsilon_t^{-}
+    +
+    \epsilon_t^{0}
+    =
+    1.
+\]
+
+RankBoost chọn base ranker sao cho \(\epsilon_t^{-}-\epsilon_t^{+}\) nhỏ nhất, tức là ưu tiên base ranker có trọng số xếp đúng lớn và trọng số xếp sai nhỏ. Edge của base ranker được định nghĩa là:
+\begin{equation}
+    \gamma_t
+    =
+    \frac{\epsilon_t^{+}-\epsilon_t^{-}}{2}.
+    \label{eq:section5-edge}
+\end{equation}
+
+Nếu \(\gamma_t>0\), base ranker \(h_t\) xếp đúng nhiều hơn xếp sai theo phân phối hiện tại. Đây là điều kiện yếu giúp boosting cải thiện dần qua các vòng.
+
+\subsection{Trọng số của base ranker}
+
+Sau khi chọn được \(h_t\), RankBoost gán cho nó trọng số:
+\begin{equation}
+    \alpha_t
+    =
+    \frac{1}{2}
+    \log
+    \frac{\epsilon_t^{+}}{\epsilon_t^{-}}.
+    \label{eq:section5-alpha}
+\end{equation}
+
+Nếu \(\epsilon_t^{+}>\epsilon_t^{-}\), thì \(\alpha_t>0\). Base ranker càng tốt, tức là \(\epsilon_t^{+}\) càng lớn so với \(\epsilon_t^{-}\), thì \(\alpha_t\) càng lớn. Vì vậy, các base rankers mạnh hơn sẽ có ảnh hưởng lớn hơn trong hàm điểm cuối cùng \(g\).
+
+\subsection{Cập nhật phân phối trọng số}
+
+Sau khi chọn \(h_t\) và \(\alpha_t\), RankBoost cập nhật phân phối trọng số trên các cặp:
+\begin{equation}
+    D_{t+1}(i)
+    =
+    \frac{
+        D_t(i)
+        \exp
+        \left(
+            -\alpha_t
+            y_i
+            \big(h_t(x'_i)-h_t(x_i)\big)
+        \right)
+    }{
+        Z_t
+    },
+    \label{eq:section5-distribution-update}
+\end{equation}
+trong đó \(Z_t\) là hệ số chuẩn hoá:
+\begin{equation}
+    Z_t
+    =
+    \sum_{i=1}^{m}
+    D_t(i)
+    \exp
+    \left(
+        -\alpha_t
+        y_i
+        \big(h_t(x'_i)-h_t(x_i)\big)
+    \right).
+    \label{eq:section5-normalization-factor}
+\end{equation}
+
+Hệ số \(Z_t\) đảm bảo \(D_{t+1}\) vẫn là một phân phối. Nếu cặp thứ \(i\) được xếp đúng, trọng số của nó được nhân với \(e^{-\alpha_t}\). Nếu cặp đó bị xếp sai, trọng số được nhân với \(e^{\alpha_t}\). Nếu cặp bị hoà, hệ số nhân là \(1\).
+
+Vì \(\alpha_t>0\), các cặp bị xếp sai được tăng trọng số tương đối, còn các cặp được xếp đúng bị giảm trọng số tương đối. Đây là cơ chế giúp RankBoost tập trung vào các cặp khó hơn qua từng vòng.
+
+\subsection{Thuật toán RankBoost}
+
+Thuật toán RankBoost có thể tóm tắt như sau.
+
+\begin{enumerate}[label=\textbf{Bước \arabic*.}, leftmargin=*]
+    \item Khởi tạo phân phối đều:
+    \[
+        D_1(i)=\frac{1}{m},
+        \qquad
+        i=1,\ldots,m.
+    \]
+
+    \item Với mỗi vòng \(t=1,\ldots,T\), chọn base ranker:
+    \[
+        h_t
+        \in
+        \arg\min_{h\in\mathcal{H}}
+        \left(
+            \epsilon_t^{-}(h)-\epsilon_t^{+}(h)
+        \right).
+    \]
+
+    \item Tính trọng số:
+    \[
+        \alpha_t
+        =
+        \frac{1}{2}
+        \log
+        \frac{\epsilon_t^{+}}{\epsilon_t^{-}}.
+    \]
+
+    \item Cập nhật phân phối theo công thức~\eqref{eq:section5-distribution-update}.
+
+    \item Sau \(T\) vòng, trả về:
+    \[
+        g(x)
+        =
+        \sum_{t=1}^{T}
+        \alpha_t h_t(x).
+    \]
+\end{enumerate}
+
+Hàm \(g\) sau cùng được dùng để xếp hạng các đối tượng: đối tượng nào có \(g(x)\) lớn hơn sẽ được xếp cao hơn.
+
+\subsection{Biểu diễn phân phối sau nhiều vòng}
+
+Để phân tích RankBoost, ta cần biểu diễn \(D_{t+1}\) theo tổ hợp các base rankers đã chọn. Gọi:
+\[
+    g_t(x)
+    =
+    \sum_{s=1}^{t}
+    \alpha_s h_s(x).
+\]
+
+Khi đó, bằng cách khai triển đệ quy công thức cập nhật, ta có:
+\begin{equation}
+    D_{t+1}(i)
+    =
+    \frac{
+        \exp
+        \left(
+            -y_i
+            \big(g_t(x'_i)-g_t(x_i)\big)
+        \right)
+    }{
+        m
+        \prod_{s=1}^{t}Z_s
+    }.
+    \label{eq:section5-distribution-closed-form}
+\end{equation}
+
+Công thức này cho thấy trọng số của một cặp sau nhiều vòng phụ thuộc vào margin tích luỹ của hàm \(g_t\) trên cặp đó. Nếu cặp có margin lớn và đúng chiều, trọng số giảm; nếu cặp bị xếp sai hoặc margin nhỏ, trọng số vẫn lớn.
+
+\subsection{Chặn lỗi thực nghiệm của RankBoost}
+
+Sau \(T\) vòng, RankBoost trả về:
+\[
+    g(x)=g_T(x)=\sum_{t=1}^{T}\alpha_t h_t(x).
+\]
+
+Lỗi thực nghiệm của \(g\) là:
+\begin{equation}
+    \widehat{R}(g)
+    =
+    \frac{1}{m}
+    \sum_{i=1}^{m}
+    \mathbf{1}
+    \left[
+        y_i
+        \big(g(x'_i)-g(x_i)\big)
+        \leq 0
+    \right].
+    \label{eq:section5-rankboost-empirical-error}
+\end{equation}
+
+Ta có chặn lỗi thực nghiệm sau.
+
+\paragraph{Định lý 5.1.}
+Lỗi thực nghiệm của hàm \(g\) trả về bởi RankBoost thoả:
+\begin{equation}
+    \widehat{R}(g)
+    \leq
+    \exp
+    \left(
+        -2
+        \sum_{t=1}^{T}
+        \left(
+            \frac{\epsilon_t^{+}-\epsilon_t^{-}}{2}
+        \right)^2
+    \right).
+    \label{eq:section5-rankboost-empirical-bound}
+\end{equation}
+
+Nếu tồn tại \(\gamma>0\) sao cho với mọi \(t=1,\ldots,T\),
+\[
+    \gamma
+    \leq
+    \frac{\epsilon_t^{+}-\epsilon_t^{-}}{2},
+\]
+thì:
+\begin{equation}
+    \widehat{R}(g)
+    \leq
+    \exp(-2\gamma^2T).
+    \label{eq:section5-rankboost-exponential-bound}
+\end{equation}
+
+Định lý cho thấy nếu mỗi vòng boosting tìm được một base ranker có edge dương ít nhất \(\gamma\), lỗi thực nghiệm của RankBoost giảm theo hàm mũ theo số vòng \(T\). Đây là tính chất tương tự AdaBoost trong bài toán phân loại nhị phân.
+
+\subsection{Chứng minh Định lý 5.1}
+
+Ta chỉ trình bày ý tưởng chính của chứng minh. Sử dụng bất đẳng thức:
+\[
+    \mathbf{1}[u\leq 0]\leq \exp(-u),
+    \qquad
+    \forall u\in\mathbb{R},
+\]
+với
+\[
+    u_i=
+    y_i
+    \big(g(x'_i)-g(x_i)\big),
+\]
+ta có:
+\[
+    \widehat{R}(g)
+    \leq
+    \frac{1}{m}
+    \sum_{i=1}^{m}
+    \exp
+    \left(
+        -y_i
+        \big(g(x'_i)-g(x_i)\big)
+    \right).
+\]
+
+Từ công thức~\eqref{eq:section5-distribution-closed-form} với \(t=T\), suy ra:
+\[
+    \widehat{R}(g)
+    \leq
+    \prod_{t=1}^{T}Z_t.
+\]
+
+Tiếp theo, chia các cặp thành ba nhóm được xếp đúng, xếp sai và hoà, ta có:
+\[
+    Z_t
+    =
+    \epsilon_t^{+}e^{-\alpha_t}
+    +
+    \epsilon_t^{-}e^{\alpha_t}
+    +
+    \epsilon_t^{0}.
+\]
+
+Với lựa chọn
+\[
+    \alpha_t
+    =
+    \frac{1}{2}
+    \log
+    \frac{\epsilon_t^{+}}{\epsilon_t^{-}},
+\]
+ta thu được:
+\[
+    Z_t
+    =
+    2\sqrt{\epsilon_t^{+}\epsilon_t^{-}}
+    +
+    \epsilon_t^{0}.
+\]
+
+Sử dụng các bước chặn chuẩn trong phân tích RankBoost, ta có:
+\[
+    Z_t
+    \leq
+    \exp
+    \left(
+        -2
+        \left(
+            \frac{\epsilon_t^{+}-\epsilon_t^{-}}{2}
+        \right)^2
+    \right).
+\]
+
+Thay chặn này vào \(\widehat{R}(g)\leq\prod_{t=1}^{T}Z_t\), ta thu được:
+\[
+    \widehat{R}(g)
+    \leq
+    \exp
+    \left(
+        -2
+        \sum_{t=1}^{T}
+        \left(
+            \frac{\epsilon_t^{+}-\epsilon_t^{-}}{2}
+        \right)^2
+    \right).
+\]
+
+Nếu mỗi edge đều không nhỏ hơn \(\gamma\), thì tổng trong mũ không nhỏ hơn \(T\gamma^2\), và do đó:
+\[
+    \widehat{R}(g)
+    \leq
+    \exp(-2\gamma^2T).
+\]
+
+\subsection{[MỞ RỘNG] Vì sao \texorpdfstring{\(\alpha_t\)}{alpha t} tối thiểu hoá \texorpdfstring{\(Z_t\)}{Zt}}
+
+Hệ số \(\alpha_t\) có thể được giải thích bằng cách xem \(Z_t\) như một hàm của \(\alpha\):
+\[
+    Z_t(\alpha)
+    =
+    \epsilon_t^{+}e^{-\alpha}
+    +
+    \epsilon_t^{-}e^{\alpha}
+    +
+    \epsilon_t^{0}.
+\]
+
+Lấy đạo hàm theo \(\alpha\):
+\[
+    \frac{dZ_t(\alpha)}{d\alpha}
+    =
+    -\epsilon_t^{+}e^{-\alpha}
+    +
+    \epsilon_t^{-}e^{\alpha}.
+\]
+
+Cho đạo hàm bằng \(0\), ta được:
+\[
+    e^{2\alpha}
+    =
+    \frac{\epsilon_t^{+}}{\epsilon_t^{-}}.
+\]
+
+Do đó:
+\[
+    \alpha
+    =
+    \frac{1}{2}
+    \log
+    \frac{\epsilon_t^{+}}{\epsilon_t^{-}}.
+\]
+
+Vì vậy, công thức chọn \(\alpha_t\) trong RankBoost được chọn để tối thiểu hoá hệ số chuẩn hoá \(Z_t\), mà tích các \(Z_t\) lại là một chặn trên của lỗi thực nghiệm.
+
+\subsection{RankBoost và coordinate descent}
+
+RankBoost cũng có thể được hiểu như việc áp dụng coordinate descent lên một hàm mục tiêu lồi và khả vi. Xét hàm:
+\begin{equation}
+    F(\alpha)
+    =
+    \sum_{i=1}^{m}
+    \exp
+    \left(
+        -y_i
+        \left[
+            g(x'_i)-g(x_i)
+        \right]
+    \right),
+    \label{eq:section5-coordinate-descent-objective}
+\end{equation}
+trong đó:
+\[
+    g(x)
+    =
+    \sum_{t=1}^{T}
+    \alpha_t h_t(x).
+\]
+
+Hàm \(F(\alpha)\) là một chặn lồi của lỗi pairwise misranking dạng chỉ thị. Ở mỗi vòng, RankBoost chọn base ranker \(h_t\) tương ứng với một hướng toạ độ làm giảm nhanh nhất hàm \(F\). Sau đó, hệ số \(\alpha_t\) được chọn để tối thiểu hoá \(F\) theo hướng đó. Vì vậy, RankBoost có thể được xem là coordinate descent trong không gian các tổ hợp tuyến tính của base rankers.
+
+\subsection{Ví dụ minh hoạ}
+
+Xét ba tài liệu \(d_1,d_2,d_3\) với thứ tự đúng:
+\[
+    d_1 \succ d_2 \succ d_3.
+\]
+
+Ta xét ba cặp:
+\[
+    (d_2,d_1,+1),
+    \qquad
+    (d_3,d_1,+1),
+    \qquad
+    (d_3,d_2,+1).
+\]
+
+Ban đầu, mỗi cặp có trọng số \(1/3\). Giả sử base ranker \(h_1\) cho điểm:
+\[
+    h_1(d_1)=1,
+    \qquad
+    h_1(d_2)=1,
+    \qquad
+    h_1(d_3)=0.
+\]
+
+Khi đó, cặp \((d_2,d_1)\) bị hoà vì \(h_1(d_1)-h_1(d_2)=0\), còn hai cặp \((d_3,d_1)\) và \((d_3,d_2)\) được xếp đúng. Vì vậy:
+\[
+    \epsilon_1^{+}=\frac{2}{3},
+    \qquad
+    \epsilon_1^{-}=0,
+    \qquad
+    \epsilon_1^{0}=\frac{1}{3}.
+\]
+
+Ví dụ này cho thấy vai trò của ba nhóm cặp: xếp đúng, xếp sai và hoà điểm. Trong trường hợp \(\epsilon_t^{-}=0\), công thức \(\alpha_t=\frac{1}{2}\log(\epsilon_t^{+}/\epsilon_t^{-})\) không xác định hữu hạn; thực tế có thể xử lý bằng làm trơn nhỏ hoặc dừng sớm nếu không còn cặp bị xếp sai.
+
+\subsection{[MỞ RỘNG] Phân tích độ phức tạp của RankBoost}
+
+Giả sử tập huấn luyện có \(m\) cặp và thuật toán chạy trong \(T\) vòng. Nếu bỏ qua chi phí tìm base ranker, việc tính các đại lượng \(\epsilon_t^{+}\), \(\epsilon_t^{-}\), \(\epsilon_t^{0}\) cần duyệt qua \(m\) cặp, nên có chi phí \(O(m)\). Việc cập nhật phân phối \(D_{t+1}\) cũng có chi phí \(O(m)\).
+
+Do đó, chi phí mỗi vòng là:
+\[
+    O(m),
+\]
+và sau \(T\) vòng, tổng chi phí là:
+\[
+    O(Tm).
+\]
+
+Nếu \(m\) được tạo từ tất cả các cặp của \(n\) đối tượng, thì:
+\[
+    m=
+    \frac{n(n-1)}{2}
+    =
+    O(n^2).
+\]
+
+Khi đó, chi phí tổng quát có thể trở thành \(O(Tn^2)\), còn bộ nhớ để lưu phân phối trên các cặp là \(O(n^2)\). Điều này cho thấy RankBoost có thể gặp khó khăn khi số lượng cặp rất lớn, và là động lực để xét các phiên bản hiệu quả hơn trong bipartite ranking.
+
+\subsection{Liên hệ với AdaBoost}
+
+RankBoost có quan hệ chặt chẽ với AdaBoost. Cả hai thuật toán đều duy trì một phân phối trọng số, chọn một weak learner tại mỗi vòng, gán trọng số cho weak learner đó và cập nhật phân phối để tập trung vào các mẫu khó.
+
+Điểm khác biệt chính là AdaBoost duy trì trọng số trên từng điểm dữ liệu \((x_i,y_i)\), còn RankBoost duy trì trọng số trên từng cặp \((x_i,x'_i,y_i)\). Vì vậy, AdaBoost cố gắng giảm lỗi phân loại từng điểm, còn RankBoost cố gắng giảm lỗi xếp hạng theo từng cặp.
+
+\subsection{Tóm tắt}
+
+RankBoost là một thuật toán boosting cho bài toán ranking theo từng cặp. Thuật toán duy trì phân phối trọng số trên các cặp huấn luyện, chọn base ranker có khả năng xếp đúng các cặp có trọng số lớn, sau đó cập nhật phân phối để tập trung vào các cặp bị xếp sai. Hàm ranking cuối cùng là tổ hợp tuyến tính của các base rankers.
+
+Kết quả lý thuyết quan trọng của RankBoost là lỗi thực nghiệm giảm theo hàm mũ nếu tại mỗi vòng tồn tại một base ranker có edge dương. Ngoài ra, RankBoost có thể được hiểu như coordinate descent trên một hàm mục tiêu lồi dạng exponential loss. Phân tích này tạo nền tảng cho phần tiếp theo, nơi ta xét trường hợp đặc biệt nhưng rất quan trọng của ranking: bipartite ranking.

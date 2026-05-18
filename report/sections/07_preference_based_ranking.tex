@@ -1,0 +1,399 @@
+\section{Preference-based ranking}
+
+Các phần trước chủ yếu xét \textit{score-based ranking}, trong đó mô hình học một hàm điểm \(h:\mathcal{X}\rightarrow\mathbb{R}\), rồi sinh ranking bằng cách sắp xếp các đối tượng theo điểm số. Trong phần này, ta xét một thiết lập khác gọi là \textit{preference-based ranking}. Thay vì học điểm số riêng cho từng đối tượng, mô hình học trực tiếp một hàm ưu tiên giữa từng cặp đối tượng.
+
+Ý tưởng chính của preference-based ranking là: nếu ta có thể dự đoán đối tượng nào được ưu tiên hơn trong từng cặp, thì ta có thể dùng các dự đoán này để xây dựng một ranking cho toàn bộ tập đối tượng cần xếp hạng. Tuy nhiên, các quan hệ ưu tiên theo từng cặp có thể không bắc cầu, nên việc chuyển từ dự đoán cặp sang ranking toàn cục không phải lúc nào cũng đơn giản.
+
+\subsection{Thiết lập preference-based ranking}
+
+Gọi \(\mathcal{X}\) là không gian đầu vào. Trong preference-based ranking, ta học một hàm:
+\begin{equation}
+    h:\mathcal{X}\times\mathcal{X}\rightarrow[0,1].
+    \label{eq:section7-preference-function}
+\end{equation}
+
+Giá trị \(h(u,v)\) được hiểu là mức độ mô hình tin rằng \(u\) nên được xếp trước \(v\). Nếu
+\[
+    h(u,v)>\frac{1}{2},
+\]
+thì mô hình có xu hướng xếp \(u\) cao hơn \(v\). Ngược lại, nếu
+\[
+    h(u,v)<\frac{1}{2},
+\]
+thì mô hình có xu hướng xếp \(v\) cao hơn \(u\).
+
+Trong một số trường hợp, ta xét hàm ưu tiên nhị phân:
+\[
+    h:\mathcal{X}\times\mathcal{X}\rightarrow\{0,1\},
+\]
+trong đó \(h(u,v)=1\) nghĩa là \(u\succ v\).
+
+Khác với score-based ranking, hàm \(h(u,v)\) không nhất thiết được sinh ra từ một hàm điểm \(s:\mathcal{X}\rightarrow\mathbb{R}\). Vì vậy, preference-based ranking có thể biểu diễn các quan hệ ưu tiên phức tạp hơn, bao gồm cả các quan hệ không bắc cầu.
+
+\subsection{Hai giai đoạn của preference-based ranking}
+
+Preference-based ranking thường gồm hai giai đoạn.
+
+\paragraph{Giai đoạn 1.}
+Từ dữ liệu huấn luyện gồm các cặp đối tượng có nhãn ưu tiên, ta học một hàm ưu tiên:
+\[
+    h:\mathcal{X}\times\mathcal{X}\rightarrow[0,1].
+\]
+
+\paragraph{Giai đoạn 2.}
+Với một tập truy vấn hữu hạn:
+\[
+    X_q=\{x_1,x_2,\ldots,x_n\}\subseteq\mathcal{X},
+\]
+ta dùng hàm \(h\) để sinh ra một ranking:
+\[
+    \pi=(\pi(1),\pi(2),\ldots,\pi(n)).
+\]
+
+Ở đây, \(x_{\pi(1)}\) là đối tượng được xếp cao nhất, \(x_{\pi(2)}\) là đối tượng xếp thứ hai, và cứ tiếp tục như vậy.
+
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}[
+        box/.style={
+            draw,
+            rounded corners,
+            minimum width=3.2cm,
+            minimum height=1.0cm,
+            align=center,
+            font=\small
+        },
+        widebox/.style={
+            draw,
+            rounded corners,
+            minimum width=4.2cm,
+            minimum height=1.0cm,
+            align=center,
+            font=\small
+        },
+        arrow/.style={
+            -{Stealth[length=2.7mm]},
+            thick
+        }
+    ]
+
+    \node[box] (data) at (-4.8,0)
+    {Dữ liệu cặp\\ \((u,v,y)\)};
+
+    \node[widebox] (learn) at (0,0)
+    {Học hàm ưu tiên\\ \(h(u,v)\)};
+
+    \node[box] (rank) at (4.8,0)
+    {Sinh ranking\\ trên \(X_q\)};
+
+    \draw[arrow] (data.east) -- node[above, font=\scriptsize] {Giai đoạn 1} (learn.west);
+    \draw[arrow] (learn.east) -- node[above, font=\scriptsize] {Giai đoạn 2} (rank.west);
+
+    \node[font=\small, align=center] at (0,-1.45)
+    {Học quan hệ từng cặp, sau đó dùng các quan hệ này\\
+    để tạo ranking toàn cục.};
+
+    \end{tikzpicture}
+    \caption{Hai giai đoạn của preference-based ranking.}
+    \label{fig:section7-preference-pipeline}
+\end{figure}
+
+Trong score-based ranking, ranking được tạo trực tiếp bằng cách sắp xếp điểm số. Trong preference-based ranking, ta cần thêm một bước chuyển từ các dự đoán theo cặp sang một ranking toàn cục.
+
+\subsection{Ranking và loss giữa hai thứ tự}
+
+Với một tập \(X_q=\{x_1,\ldots,x_n\}\), một ranking \(\pi\) là một hoán vị của các chỉ số \(\{1,\ldots,n\}\). Nếu \(x_i\) đứng trước \(x_j\) trong ranking \(\pi\), ta viết:
+\[
+    x_i \succ_{\pi} x_j.
+\]
+
+Giả sử tồn tại một ranking mục tiêu \(\pi^{*}\). Một cách tự nhiên để đo lỗi của ranking \(\pi\) là đếm số cặp mà \(\pi\) sắp xếp ngược so với \(\pi^{*}\). Pairwise ranking loss được định nghĩa là:
+\begin{equation}
+    L(\pi,\pi^{*})
+    =
+    \frac{1}{\binom{n}{2}}
+    \sum_{1\leq i<j\leq n}
+    \mathbf{1}
+    \left[
+        \pi \text{ và } \pi^{*}
+        \text{ sắp xếp cặp } (x_i,x_j) \text{ khác nhau}
+    \right].
+    \label{eq:section7-pairwise-ranking-loss}
+\end{equation}
+
+Nếu dùng ký hiệu \(\pi(i)\) là vị trí của \(x_i\) trong ranking \(\pi\), thì hai ranking sắp xếp khác nhau trên cặp \((x_i,x_j)\) khi:
+\[
+    \big(\pi(i)-\pi(j)\big)
+    \big(\pi^{*}(i)-\pi^{*}(j)\big)<0.
+\]
+
+Do đó, có thể viết:
+\[
+    L(\pi,\pi^{*})
+    =
+    \frac{1}{\binom{n}{2}}
+    \sum_{1\leq i<j\leq n}
+    \mathbf{1}
+    \left[
+        \big(\pi(i)-\pi(j)\big)
+        \big(\pi^{*}(i)-\pi^{*}(j)\big)<0
+    \right].
+\]
+
+Loss này chính là tỉ lệ cặp bị đảo thứ tự, tương tự Kendall tau distance sau khi chuẩn hoá.
+
+\subsection{Regret trong preference-based ranking}
+
+Trong preference-based ranking, một hàm ưu tiên \(h\) có thể không sinh ra ranking hoàn hảo. Do đó, ta quan tâm đến mức độ thiệt hại của ranking mà thuật toán sinh ra so với ranking tốt nhất có thể.
+
+Gọi \(A\) là một thuật toán nhận vào tập \(X_q\) và hàm ưu tiên \(h\), rồi trả về ranking:
+\[
+    \pi_A=A(X_q,h).
+\]
+
+Gọi \(\pi^{*}\) là ranking tối ưu theo một tiêu chí loss nào đó. Regret của thuật toán \(A\) có thể được viết dưới dạng:
+\begin{equation}
+    \mathrm{Regret}(A)
+    =
+    L(\pi_A)-L(\pi^{*}).
+    \label{eq:section7-regret-definition}
+\end{equation}
+
+Ở đây, \(L(\pi)\) là loss của ranking \(\pi\) theo phân phối hoặc theo tập truy vấn đang xét. Regret càng nhỏ thì thuật toán sinh ranking càng gần với ranking tối ưu. Một thách thức quan trọng là thiết kế thuật toán có regret nhỏ, ngay cả khi hàm ưu tiên \(h\) có thể chứa lỗi hoặc không bắc cầu.
+
+\subsection{Thuật toán sort-by-degree}
+
+Một thuật toán đơn giản để chuyển hàm ưu tiên thành ranking là \textit{sort-by-degree}. Ý tưởng là xem các đối tượng như đỉnh của một đồ thị có hướng. Nếu \(h(u,v)\) cho rằng \(u\) được ưu tiên hơn \(v\), ta thêm một cạnh từ \(u\) đến \(v\). Sau đó, ta xếp các đối tượng theo số lần thắng, tức là số cạnh đi ra.
+
+Với một tập \(X_q=\{x_1,\ldots,x_n\}\), định nghĩa degree score của \(x_i\):
+\begin{equation}
+    d(x_i)
+    =
+    \sum_{\substack{j=1\\j\neq i}}^{n}
+    \mathbf{1}
+    \left[
+        h(x_i,x_j)>\frac{1}{2}
+    \right].
+    \label{eq:section7-degree-score}
+\end{equation}
+
+Thuật toán sort-by-degree sắp xếp các đối tượng theo \(d(x_i)\) giảm dần:
+\[
+    d(x_{\pi(1)})\geq d(x_{\pi(2)})\geq \cdots \geq d(x_{\pi(n)}).
+\]
+
+Đối tượng thắng nhiều cặp hơn sẽ có degree score lớn hơn và được xếp ở vị trí cao hơn.
+
+\subsection{Thuật toán sort-by-degree}
+
+Thuật toán sort-by-degree có thể được mô tả như sau.
+
+\begin{enumerate}[label=\textbf{Bước \arabic*.}, leftmargin=*]
+    \item Với mỗi \(x_i\in X_q\), khởi tạo:
+    \[
+        d(x_i)=0.
+    \]
+
+    \item Với mỗi cặp \(i\neq j\), nếu \(h(x_i,x_j)>1/2\), cập nhật:
+    \[
+        d(x_i)\leftarrow d(x_i)+1.
+    \]
+
+    \item Sắp xếp các đối tượng theo \(d(x_i)\) giảm dần.
+\end{enumerate}
+
+Nếu có hoà điểm degree, ta có thể phá hoà bằng thứ tự bất kỳ hoặc bằng một tiêu chí phụ như điểm trung bình của \(h(x_i,x_j)\).
+
+\subsection{Hạn chế của sort-by-degree}
+
+Sort-by-degree đơn giản và dễ cài đặt, nhưng có một hạn chế quan trọng: khi quan hệ ưu tiên không bắc cầu hoặc chứa nhiều chu trình, degree score có thể không phản ánh chính xác ranking tốt nhất.
+
+Ví dụ, xét ba đối tượng \(x_1,x_2,x_3\) với quan hệ:
+\begin{equation}
+    x_1\succ x_2,
+    \qquad
+    x_2\succ x_3,
+    \qquad
+    x_3\succ x_1.
+    \label{eq:section7-cycle-preference}
+\end{equation}
+
+Khi đó, mỗi đối tượng thắng đúng một lần:
+\[
+    d(x_1)=d(x_2)=d(x_3)=1.
+\]
+
+Sort-by-degree không thể phân biệt ba đối tượng này chỉ dựa trên degree score. Điều này cho thấy khi quan hệ ưu tiên có chu trình, việc sinh ranking toàn cục trở nên khó hơn.
+
+\paragraph{[MỞ RỘNG] Phản ví dụ về quan hệ không bắc cầu.}
+
+Quan hệ trong công thức~\eqref{eq:section7-cycle-preference} là một phản ví dụ cho giả định bắc cầu. Ta chứng minh rằng không tồn tại hàm điểm thực \(s:\mathcal{X}\rightarrow\mathbb{R}\) nào có thể biểu diễn hoàn hảo chu trình này.
+
+Thật vậy, nếu tồn tại \(s\), từ \(x_1\succ x_2\) ta phải có:
+\[
+    s(x_1)>s(x_2).
+\]
+
+Từ \(x_2\succ x_3\), ta phải có:
+\[
+    s(x_2)>s(x_3).
+\]
+
+Kết hợp hai bất đẳng thức trên, ta suy ra:
+\[
+    s(x_1)>s(x_2)>s(x_3),
+\]
+nên:
+\[
+    s(x_1)>s(x_3).
+\]
+
+Nhưng quan hệ \(x_3\succ x_1\) lại yêu cầu:
+\[
+    s(x_3)>s(x_1).
+\]
+
+Điều này mâu thuẫn với \(s(x_1)>s(x_3)\). Do đó, không tồn tại hàm điểm thực nào biểu diễn hoàn hảo chu trình ưu tiên này.
+
+\subsection{Randomized QuickSort cho preference-based ranking}
+
+Một hướng tiếp cận khác là dùng \textit{randomized QuickSort}. Thuật toán này lấy cảm hứng từ QuickSort cổ điển, nhưng phép so sánh giữa hai phần tử được thực hiện bằng hàm ưu tiên \(h\).
+
+Với tập \(X_q\), thuật toán chọn ngẫu nhiên một pivot \(u\in X_q\). Sau đó, với mỗi phần tử \(v\neq u\), thuật toán so sánh \(v\) với \(u\). Nếu \(h(v,u)>1/2\), ta đưa \(v\) vào tập bên trái pivot, vì \(v\) nên xếp trước \(u\). Nếu \(h(u,v)>1/2\), ta đưa \(v\) vào tập bên phải pivot, vì \(u\) nên xếp trước \(v\).
+
+Điểm quan trọng là thuật toán không yêu cầu quan hệ ưu tiên phải bắc cầu. Nó chỉ cần một hàm \(h\) để so sánh pivot với từng phần tử còn lại, rồi đệ quy trên hai tập con.
+
+\subsection{Thuật toán randomized QuickSort}
+
+Thuật toán có thể được mô tả đệ quy như sau.
+
+\begin{enumerate}[label=\textbf{Bước \arabic*.}, leftmargin=*]
+    \item Nếu \(|X_q|\leq 1\), trả về chính \(X_q\).
+
+    \item Chọn ngẫu nhiên một pivot:
+    \[
+        u\sim \mathrm{Uniform}(X_q).
+    \]
+
+    \item Khởi tạo hai tập:
+    \[
+        L=\varnothing,
+        \qquad
+        R=\varnothing.
+    \]
+
+    \item Với mỗi \(v\in X_q\setminus\{u\}\), nếu \(h(v,u)>1/2\), đưa \(v\) vào \(L\); ngược lại đưa \(v\) vào \(R\).
+
+    \item Đệ quy trên \(L\) và \(R\), rồi trả về:
+    \[
+        \mathrm{QuickSort}(L)
+        \ \Vert\
+        (u)
+        \ \Vert\
+        \mathrm{QuickSort}(R),
+    \]
+    trong đó \(\Vert\) ký hiệu phép nối danh sách.
+\end{enumerate}
+
+Randomized QuickSort thường cần ít phép so sánh hơn sort-by-degree, đặc biệt khi số lượng đối tượng trong tập truy vấn lớn.
+
+\subsection{So sánh sort-by-degree và randomized QuickSort}
+
+Hai thuật toán trên đều dùng hàm ưu tiên \(h\) để sinh ranking, nhưng có đặc điểm khác nhau.
+
+Sort-by-degree đếm số lần thắng của từng đối tượng, nên đơn giản và dễ cài đặt. Tuy nhiên, thuật toán này cần xét gần như toàn bộ các cặp, do đó số lần gọi hàm ưu tiên thường là \(O(n^2)\).
+
+Randomized QuickSort dùng chiến lược chia để trị bằng pivot. Thuật toán có tính ngẫu nhiên do pivot được chọn ngẫu nhiên, và số lần so sánh kỳ vọng là \(O(n\log n)\). Vì vậy, randomized QuickSort thường phù hợp hơn khi \(n\) lớn, trong khi sort-by-degree phù hợp hơn khi \(n\) nhỏ hoặc khi cần một phương pháp rất đơn giản.
+
+\subsection{[MỞ RỘNG] Phân tích độ phức tạp}
+
+\subsubsection{Độ phức tạp của sort-by-degree}
+
+Sort-by-degree cần xét các cặp trong tập \(X_q\). Nếu có \(n\) đối tượng, số cặp không thứ tự là:
+\begin{equation}
+    \binom{n}{2}
+    =
+    \frac{n(n-1)}{2}.
+    \label{eq:section7-number-of-pairs}
+\end{equation}
+
+Do đó, số lần gọi hàm ưu tiên \(h\) là \(O(n^2)\). Sau khi tính degree score, ta cần sắp xếp \(n\) đối tượng, có chi phí \(O(n\log n)\). Vì vậy, tổng chi phí bị chi phối bởi bước xét cặp:
+\[
+    O(n^2+n\log n)=O(n^2).
+\]
+
+\subsubsection{Độ phức tạp của randomized QuickSort}
+
+Randomized QuickSort có cùng cấu trúc với QuickSort cổ điển. Trong trường hợp trung bình, số lần so sánh là:
+\[
+    O(n\log n).
+\]
+
+Trong trường hợp xấu nhất, nếu pivot liên tục tạo ra phân hoạch lệch, số lần so sánh có thể là:
+\[
+    O(n^2).
+\]
+
+Tuy nhiên, do pivot được chọn ngẫu nhiên, độ phức tạp kỳ vọng thường là \(O(n\log n)\). Đây là lợi thế lớn so với sort-by-degree khi \(n\) lớn.
+
+\subsection{Mở rộng sang weighted loss}
+
+Trong một số ứng dụng, không phải mọi cặp bị đảo thứ tự đều quan trọng như nhau. Ví dụ, lỗi ở các vị trí đầu danh sách thường nghiêm trọng hơn lỗi ở cuối danh sách. Khi đó, ta có thể dùng weighted loss:
+\begin{equation}
+    L_w(\pi,\pi^{*})
+    =
+    \sum_{1\leq i<j\leq n}
+    w_{ij}
+    \mathbf{1}
+    \left[
+        \pi \text{ và } \pi^{*}
+        \text{ sắp xếp cặp } (x_i,x_j) \text{ khác nhau}
+    \right],
+    \label{eq:section7-weighted-loss}
+\end{equation}
+trong đó \(w_{ij}\geq 0\) là trọng số của cặp \((x_i,x_j)\).
+
+Nếu muốn nhấn mạnh các lỗi ở đầu danh sách, ta có thể chọn \(w_{ij}\) lớn hơn cho các cặp liên quan đến đối tượng có độ liên quan cao. Cách này giúp tiêu chí đánh giá gần hơn với các độ đo trong truy xuất thông tin như NDCG hoặc precision@\(k\).
+
+\subsection{Ví dụ minh hoạ}
+
+Xét bốn đối tượng \(a,b,c,d\). Giả sử hàm ưu tiên dự đoán các quan hệ:
+\[
+    b\succ a,
+    \qquad
+    b\succ c,
+    \qquad
+    b\succ d,
+\]
+và:
+\[
+    c\succ a,
+    \qquad
+    c\succ d,
+    \qquad
+    a\succ d.
+\]
+
+Khi đó, số lần thắng của từng đối tượng là:
+\[
+    d(b)=3,
+    \qquad
+    d(c)=2,
+    \qquad
+    d(a)=1,
+    \qquad
+    d(d)=0.
+\]
+
+Sort-by-degree trả về ranking:
+\[
+    b\succ c\succ a\succ d.
+\]
+
+Nếu dùng randomized QuickSort, ranking có thể phụ thuộc vào pivot được chọn ở từng bước. Tuy nhiên, nếu hàm ưu tiên nhất quán với các quan hệ trên, thuật toán cũng có xu hướng đưa \(b\) lên đầu và \(d\) xuống cuối.
+
+\subsection{Tóm tắt}
+
+Phần này đã trình bày preference-based ranking, trong đó mô hình học trực tiếp một hàm ưu tiên \(h(u,v)\) trên từng cặp đối tượng. Khác với score-based ranking, hàm ưu tiên không nhất thiết phải được sinh ra từ một hàm điểm thực, nên có thể biểu diễn các quan hệ không bắc cầu. Tuy nhiên, điều này cũng làm cho việc sinh ranking toàn cục trở nên khó hơn.
+
+Ta đã trình bày hai thuật toán để chuyển từ hàm ưu tiên sang ranking: sort-by-degree và randomized QuickSort. Sort-by-degree đơn giản nhưng có độ phức tạp \(O(n^2)\). Randomized QuickSort phức tạp hơn nhưng có số lần so sánh kỳ vọng \(O(n\log n)\). Các phân tích này cho thấy preference-based ranking là một thiết lập linh hoạt, nhưng cần thuật toán cẩn thận để xử lý các quan hệ ưu tiên có thể không nhất quán.

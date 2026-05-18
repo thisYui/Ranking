@@ -1,0 +1,296 @@
+\section{Thảo luận về các tiêu chí đánh giá ranking}
+
+Các phần trước đã trình bày hai cách tiếp cận chính cho bài toán ranking: score-based ranking và preference-based ranking. Trong score-based ranking, mô hình học một hàm điểm \(h: \mathcal{X} \to \mathbb{R}\), sau đó sắp xếp các phần tử theo giá trị \(h(x)\). Trong preference-based ranking, mô hình trực tiếp dự đoán quan hệ ưu tiên giữa từng cặp phần tử. Dù cách biểu diễn mô hình khác nhau, câu hỏi quan trọng nhất vẫn là: một thứ tự xếp hạng được xem là tốt khi nào?
+
+Khác với bài toán phân loại, ranking không chỉ quan tâm từng điểm dữ liệu được dự đoán đúng hay sai, mà quan tâm đến quan hệ thứ tự giữa các phần tử. Trong nhiều ứng dụng như công cụ tìm kiếm, hệ gợi ý phim, phát hiện gian lận hoặc truy xuất thông tin, người dùng thường chỉ quan tâm đến một số phần tử đứng đầu. Vì vậy, việc chọn tiêu chí đánh giá phù hợp có ảnh hưởng trực tiếp đến cách thiết kế thuật toán học, hàm mất mát và cách diễn giải kết quả thực nghiệm.
+
+Phần này thảo luận các tiêu chí đánh giá ranking thường gặp, bao gồm pairwise misranking, margin-based loss, Kendall tau distance, AUC, NDCG, MAP và MRR. Cuối phần, ta so sánh ưu nhược điểm của các tiêu chí này và giải thích vì sao phần thực nghiệm của báo cáo sử dụng pairwise accuracy, ranking loss và Kendall tau distance.
+
+\subsection{Pairwise misranking và ranking loss}
+
+Trong thiết lập score-based ranking, dữ liệu huấn luyện thường bao gồm các cặp phần tử \((x_i, x'_i)\) cùng với nhãn ưu tiên \(y_i \in \{-1,+1\}\). Với một hàm điểm \(h\), cặp \((x_i, x'_i)\) được xếp đúng nếu dấu của hiệu điểm \(h(x'_i)-h(x_i)\) phù hợp với nhãn \(y_i\). Ngược lại, nếu mô hình đặt phần tử kém ưu tiên lên trên phần tử được ưu tiên, ta có một lỗi xếp hạng theo cặp.
+
+Empirical pairwise misranking được định nghĩa bởi:
+\begin{equation}
+    \widehat{R}(h)
+    =
+    \frac{1}{m}
+    \sum_{i=1}^{m}
+    \mathbf{1}
+    \left[
+        y_i(h(x'_i)-h(x_i)) \leq 0
+    \right].
+    \label{eq:discussion-empirical-pairwise-misranking}
+\end{equation}
+
+Đại lượng này đo tỉ lệ các cặp ưu tiên bị mô hình sắp xếp sai. Trong báo cáo này, ta gọi đại lượng tương ứng là \textit{ranking loss}. Nếu định nghĩa pairwise accuracy là tỉ lệ các cặp được xếp đúng, ta có:
+\begin{equation}
+    \text{RankingLoss}(h)
+    =
+    1 - \text{PairwiseAccuracy}(h).
+    \label{eq:discussion-ranking-loss-pairwise-accuracy}
+\end{equation}
+
+Pairwise accuracy được viết dưới dạng:
+\begin{equation}
+    \text{PairwiseAccuracy}(h)
+    =
+    \frac{1}{m}
+    \sum_{i=1}^{m}
+    \mathbf{1}
+    \left[
+        y_i(h(x'_i)-h(x_i)) > 0
+    \right].
+    \label{eq:discussion-pairwise-accuracy}
+\end{equation}
+
+Ưu điểm của pairwise misranking là nó phù hợp trực tiếp với bản chất của learning-to-rank: học quan hệ thứ tự giữa từng cặp phần tử. Đây cũng là tiêu chí tự nhiên cho Ranking SVM, RankBoost và các mô hình pairwise learning-to-rank. Tuy nhiên, tiêu chí này xem mọi cặp là quan trọng như nhau. Trong các bài toán truy xuất thông tin, lỗi ở những vị trí đầu danh sách thường nghiêm trọng hơn lỗi ở cuối danh sách. Vì vậy, pairwise loss không phải lúc nào cũng phản ánh đúng chất lượng mà người dùng cảm nhận được.
+
+\subsection{Margin-based ranking criteria}
+
+Pairwise misranking chỉ kiểm tra một cặp được xếp đúng hay sai, nhưng không đo mức độ tự tin của mô hình. Trong Ranking SVM và các phân tích dựa trên margin, ta không chỉ yêu cầu:
+\begin{equation}
+    y_i(h(x'_i)-h(x_i)) > 0,
+    \label{eq:discussion-positive-margin-condition}
+\end{equation}
+mà còn yêu cầu hiệu điểm đủ lớn:
+\begin{equation}
+    y_i(h(x'_i)-h(x_i)) \geq \rho,
+    \label{eq:discussion-rho-margin-condition}
+\end{equation}
+với \(\rho > 0\) là margin.
+
+Empirical margin loss có thể được viết dưới dạng:
+\begin{equation}
+    \widehat{R}_{\rho}(h)
+    =
+    \frac{1}{m}
+    \sum_{i=1}^{m}
+    \Phi_{\rho}
+    \left(
+        y_i(h(x'_i)-h(x_i))
+    \right),
+    \label{eq:discussion-empirical-margin-loss}
+\end{equation}
+trong đó \(\Phi_{\rho}\) là hàm margin loss. Với hinge loss, một dạng thường dùng là:
+\begin{equation}
+    \ell_i(h)
+    =
+    \max
+    \left(
+        0,
+        1 - y_i(h(x'_i)-h(x_i))
+    \right).
+    \label{eq:discussion-pairwise-hinge-loss}
+\end{equation}
+
+Cách đánh giá dựa trên margin có ý nghĩa quan trọng về mặt lý thuyết. Một mô hình không chỉ cần xếp đúng các cặp, mà còn cần tạo ra khoảng cách điểm đủ lớn giữa phần tử được ưu tiên và phần tử kém ưu tiên hơn. Margin lớn thường giúp mô hình ổn định hơn trước nhiễu và có khả năng tổng quát hoá tốt hơn.
+
+Tuy nhiên, margin-based loss thường là một surrogate loss, tức là hàm mất mát thay thế cho lỗi ranking rời rạc. Nó thuận tiện cho tối ưu hoá vì có dạng lồi hoặc gần lồi trong nhiều trường hợp, nhưng giá trị của nó không phải lúc nào cũng trùng khớp với metric cuối cùng mà ứng dụng quan tâm, chẳng hạn như NDCG@10 hay MRR.
+
+\subsection{Kendall tau distance}
+
+Kendall tau distance là một tiêu chí tự nhiên khi cần so sánh hai thứ tự xếp hạng hoàn chỉnh. Giả sử \(\sigma\) là ranking dự đoán và \(\sigma^\ast\) là ranking thật trên \(n\) phần tử. Kendall tau distance chuẩn hoá được định nghĩa là tỉ lệ số cặp bị đảo thứ tự:
+\begin{equation}
+    \Delta_{\text{KT}}(\sigma, \sigma^\ast)
+    =
+    \frac{2}{n(n-1)}
+    \sum_{u \neq v}
+    \mathbf{1}
+    \left[
+        \sigma(u) < \sigma(v)
+    \right]
+    \mathbf{1}
+    \left[
+        \sigma^\ast(v) < \sigma^\ast(u)
+    \right].
+    \label{eq:discussion-kendall-tau-distance}
+\end{equation}
+
+Giá trị của Kendall tau distance nằm trong \([0,1]\). Giá trị bằng \(0\) nghĩa là ranking dự đoán trùng hoàn toàn với ranking thật. Giá trị càng lớn nghĩa là càng nhiều cặp bị đảo thứ tự.
+
+Kendall tau distance có quan hệ chặt chẽ với pairwise ranking loss vì cả hai đều đếm số cặp bị xếp sai. Điểm khác biệt là Kendall tau thường được dùng khi ta có hai hoán vị hoàn chỉnh, còn pairwise loss thường được định nghĩa trực tiếp trên tập các cặp huấn luyện. Trong phần thực nghiệm, vì dữ liệu tổng hợp có điểm xếp hạng thật cho tất cả các mẫu, Kendall tau distance là một metric phù hợp để đo mức độ gần nhau giữa thứ tự thật và thứ tự dự đoán.
+
+\subsection{AUC trong bipartite ranking}
+
+Bipartite ranking là trường hợp đặc biệt trong đó các phần tử được chia thành hai lớp: lớp dương \(\mathcal{X}^{+}\) và lớp âm \(\mathcal{X}^{-}\). Mục tiêu là học hàm điểm \(h\) sao cho các điểm dương được xếp cao hơn các điểm âm. Lỗi bipartite misranking được định nghĩa bởi:
+\begin{equation}
+    R(h)
+    =
+    \Pr_{x^- \sim D^-, x^+ \sim D^+}
+    \left[
+        h(x^+) < h(x^-)
+    \right].
+    \label{eq:discussion-bipartite-misranking}
+\end{equation}
+
+Trên tập kiểm tra gồm \(m\) điểm dương và \(n\) điểm âm, empirical bipartite misranking là:
+\begin{equation}
+    \widehat{R}(h)
+    =
+    \frac{1}{mn}
+    \sum_{i=1}^{m}
+    \sum_{j=1}^{n}
+    \mathbf{1}
+    \left[
+        h(x_i^+) < h(x_j^-)
+    \right].
+    \label{eq:discussion-empirical-bipartite-misranking}
+\end{equation}
+
+AUC, viết tắt của Area Under the ROC Curve, có thể được hiểu là xác suất một điểm dương được xếp cao hơn một điểm âm:
+\begin{equation}
+    \text{AUC}(h)
+    =
+    \frac{1}{mn}
+    \sum_{i=1}^{m}
+    \sum_{j=1}^{n}
+    \mathbf{1}
+    \left[
+        h(x_i^+) \geq h(x_j^-)
+    \right].
+    \label{eq:discussion-auc-definition}
+\end{equation}
+
+Do đó:
+\begin{equation}
+    \text{AUC}(h) = 1 - \widehat{R}(h).
+    \label{eq:discussion-auc-one-minus-ranking-loss}
+\end{equation}
+
+AUC là một tiêu chí rất phù hợp cho bipartite ranking vì nó không phụ thuộc vào một ngưỡng phân loại cố định. Thay vì hỏi một điểm được phân loại là dương hay âm, AUC hỏi liệu điểm dương có được xếp trên điểm âm hay không. Điều này làm cho AUC đặc biệt hữu ích trong các bài toán như phát hiện gian lận, chẩn đoán y khoa, hoặc lọc tài liệu liên quan/không liên quan.
+
+Tuy nhiên, AUC cũng có hạn chế: nó xem mọi cặp dương--âm là quan trọng như nhau. Trong công cụ tìm kiếm, người dùng thường chỉ xem vài kết quả đầu tiên, nên một mô hình có AUC cao nhưng xếp sai ở các vị trí đầu vẫn có thể không tốt trong thực tế.
+
+\subsection{Precision@k, MAP và MRR}
+
+Trong truy xuất thông tin, chất lượng của các phần tử đứng đầu danh sách thường quan trọng hơn toàn bộ danh sách. Do đó, các tiêu chí như precision@k, MAP và MRR được sử dụng rộng rãi.
+
+Precision@k đo tỉ lệ phần tử liên quan trong \(k\) kết quả đầu tiên:
+\begin{equation}
+    \text{Precision@}k
+    =
+    \frac{
+        \#\text{phần tử liên quan trong top }k
+    }{k}.
+    \label{eq:discussion-precision-at-k}
+\end{equation}
+
+Metric này đơn giản và dễ hiểu. Ví dụ, precision@10 cho biết trong 10 kết quả đầu tiên có bao nhiêu kết quả thật sự liên quan. Tuy nhiên, precision@k không phân biệt vị trí cụ thể bên trong top-\(k\). Một tài liệu liên quan đứng ở vị trí 1 và một tài liệu liên quan đứng ở vị trí 10 được tính như nhau.
+
+Average Precision (AP) khắc phục một phần hạn chế này bằng cách tính trung bình precision tại các vị trí mà phần tử liên quan xuất hiện. Với nhiều truy vấn, ta lấy trung bình AP trên tất cả truy vấn để thu được Mean Average Precision (MAP). MAP phù hợp với các bài toán có nhãn liên quan dạng nhị phân, chẳng hạn một tài liệu là liên quan hoặc không liên quan đến truy vấn.
+
+MRR, viết tắt của Mean Reciprocal Rank, tập trung vào vị trí của kết quả liên quan đầu tiên. Với một truy vấn, Reciprocal Rank được định nghĩa là:
+\begin{equation}
+    \text{RR}
+    =
+    \frac{1}{r},
+    \label{eq:discussion-reciprocal-rank}
+\end{equation}
+trong đó \(r\) là vị trí của phần tử liên quan đầu tiên. MRR là trung bình của RR trên nhiều truy vấn.
+
+MRR đặc biệt phù hợp trong các ứng dụng mà người dùng chỉ cần tìm một kết quả đúng đầu tiên, ví dụ hỏi đáp, tìm kiếm câu trả lời, hoặc gợi ý một lựa chọn tốt nhất. Tuy nhiên, MRR bỏ qua các phần tử liên quan xuất hiện sau kết quả đúng đầu tiên.
+
+\subsection{DCG và NDCG}
+
+Trong nhiều bài toán ranking, mức độ liên quan không chỉ là nhị phân. Một tài liệu có thể rất liên quan, liên quan vừa phải, ít liên quan hoặc không liên quan. Khi đó, các tiêu chí như DCG và NDCG được sử dụng.
+
+Discounted Cumulative Gain (DCG) đo tổng độ liên quan của các phần tử trong danh sách, đồng thời giảm trọng số cho các vị trí thấp hơn. Một dạng phổ biến của DCG@k là:
+\begin{equation}
+    \text{DCG@}k
+    =
+    \sum_{i=1}^{k}
+    \frac{2^{r_i}-1}{\log_2(i+1)},
+    \label{eq:discussion-dcg-at-k}
+\end{equation}
+trong đó \(r_i\) là độ liên quan của phần tử ở vị trí thứ \(i\).
+
+Hệ số \(\log_2(i+1)\) đóng vai trò discount, phản ánh rằng phần tử liên quan ở vị trí cao có giá trị hơn phần tử liên quan ở vị trí thấp. Vì DCG phụ thuộc vào số lượng và độ lớn của nhãn liên quan, người ta thường chuẩn hoá nó bằng giá trị DCG lý tưởng. Normalized Discounted Cumulative Gain được định nghĩa bởi:
+\begin{equation}
+    \text{NDCG@}k
+    =
+    \frac{\text{DCG@}k}{\text{IDCG@}k},
+    \label{eq:discussion-ndcg-at-k}
+\end{equation}
+trong đó IDCG@k là DCG@k của thứ tự lý tưởng.
+
+NDCG là một trong những metric phổ biến nhất trong learning-to-rank hiện đại vì nó xử lý được nhãn liên quan nhiều mức và nhấn mạnh các vị trí đầu danh sách. Đây là lý do nhiều thuật toán thực tế như LambdaRank, LambdaMART và các biến thể gần đây thường cố gắng tối ưu trực tiếp hoặc gián tiếp NDCG.
+
+\subsection{So sánh các tiêu chí đánh giá}
+
+Mỗi tiêu chí đánh giá phản ánh một khía cạnh khác nhau của bài toán ranking. Không có một metric duy nhất phù hợp cho mọi ứng dụng. Bảng~\ref{tab:ranking-metrics-comparison} tóm tắt đặc điểm chính của các tiêu chí đã thảo luận.
+
+\begin{table}[H]
+\centering
+\caption{So sánh một số tiêu chí đánh giá ranking}
+\label{tab:ranking-metrics-comparison}
+\begin{tabular}{p{3.2cm}p{4.2cm}p{4.2cm}p{3.2cm}}
+\toprule
+\textbf{Tiêu chí} & \textbf{Ý nghĩa} & \textbf{Ưu điểm} & \textbf{Hạn chế} \\
+\midrule
+Pairwise accuracy &
+Tỉ lệ cặp được xếp đúng &
+Phù hợp với pairwise ranking, dễ hiểu, dễ cài đặt &
+Không nhấn mạnh top-\(k\) \\
+\midrule
+Ranking loss &
+Tỉ lệ cặp bị xếp sai &
+Liên hệ trực tiếp với pairwise misranking &
+Xem mọi cặp quan trọng như nhau \\
+\midrule
+Margin loss &
+Đo lỗi có xét khoảng cách điểm &
+Thuận tiện cho tối ưu hoá và phân tích lý thuyết &
+Là surrogate loss, không phải metric cuối cùng \\
+\midrule
+Kendall tau distance &
+Tỉ lệ cặp bị đảo trong hai ranking &
+Phù hợp khi so sánh toàn bộ thứ tự &
+Không tập trung riêng vào top-\(k\) \\
+\midrule
+AUC &
+Xác suất điểm dương xếp trên điểm âm &
+Phù hợp với bipartite ranking, không cần ngưỡng phân loại &
+Không nhấn mạnh vị trí đầu danh sách \\
+\midrule
+Precision@k &
+Tỉ lệ phần tử liên quan trong top-\(k\) &
+Đơn giản, tập trung vào kết quả đầu &
+Không xét thứ tự bên trong top-\(k\) \\
+\midrule
+MAP &
+Trung bình precision tại các vị trí liên quan &
+Phù hợp với nhãn nhị phân và nhiều truy vấn &
+Ít phù hợp với nhãn liên quan nhiều mức \\
+\midrule
+MRR &
+Nghịch đảo vị trí kết quả liên quan đầu tiên &
+Phù hợp với hỏi đáp hoặc tìm kiếm một kết quả đúng &
+Bỏ qua các kết quả liên quan phía sau \\
+\midrule
+NDCG@k &
+Độ liên quan có discount theo vị trí &
+Phù hợp với search/recommendation, hỗ trợ nhãn nhiều mức &
+Cần relevance score và IDCG để chuẩn hoá \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Từ bảng trên, có thể thấy các tiêu chí pairwise như pairwise accuracy, ranking loss và Kendall tau distance phù hợp với phân tích lý thuyết trong các phần trước. Trong khi đó, các tiêu chí như NDCG, MAP và MRR phù hợp hơn với hệ thống truy xuất thông tin thực tế, nơi vị trí của các kết quả đầu tiên có ý nghĩa lớn đối với trải nghiệm người dùng.
+
+\subsection{Liên hệ với thực nghiệm trong báo cáo}
+
+Trong phần thực nghiệm, nhóm lựa chọn cài đặt mô hình pairwise ranking tuyến tính và huấn luyện bằng pairwise hinge loss. Vì vậy, các metric được chọn cần phản ánh trực tiếp chất lượng học quan hệ ưu tiên giữa các cặp mẫu.
+
+Cụ thể, nhóm sử dụng ba tiêu chí chính:
+\begin{itemize}
+    \item \textbf{Pairwise accuracy}: đo tỉ lệ các cặp ưu tiên được mô hình sắp xếp đúng.
+    \item \textbf{Ranking loss}: đo tỉ lệ các cặp bị xếp sai, bằng \(1 - \text{pairwise accuracy}\).
+    \item \textbf{Kendall tau distance}: đo mức độ khác biệt giữa ranking thật và ranking dự đoán trên toàn bộ tập mẫu.
+\end{itemize}
+
+Ngoài ra, nhóm sử dụng thêm top-\(k\) overlap để kiểm tra xem mô hình có khôi phục đúng các phần tử đứng đầu hay không. Metric này không phải là tiêu chí lý thuyết chính trong chương, nhưng giúp minh hoạ trực quan hơn vai trò của ranking ở các vị trí đầu danh sách.
+
+Việc không sử dụng NDCG, MAP hoặc MRR trong thực nghiệm chính là có chủ đích. Dữ liệu tổng hợp trong báo cáo được sinh từ một hàm điểm tuyến tính liên tục, không phải từ các truy vấn với danh sách tài liệu và nhãn relevance nhiều mức. Do đó, pairwise accuracy, ranking loss và Kendall tau distance phù hợp hơn với mục tiêu kiểm chứng lý thuyết về pairwise learning-to-rank. Nếu mở rộng thực nghiệm sang dữ liệu truy xuất thông tin thực tế, chẳng hạn dữ liệu query-document, thì NDCG@k, MAP và MRR sẽ là các metric cần được bổ sung.
+
+Tóm lại, tiêu chí đánh giá ranking cần được chọn theo đúng mục tiêu ứng dụng. Với bài toán học quan hệ ưu tiên theo cặp, pairwise loss và Kendall tau distance là lựa chọn tự nhiên. Với bipartite ranking, AUC là tiêu chí phù hợp. Với search engine và recommender system, các metric tập trung vào top-\(k\) như NDCG@k, MAP và MRR thường phản ánh tốt hơn chất lượng thực tế của hệ thống.
