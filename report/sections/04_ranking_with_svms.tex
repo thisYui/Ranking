@@ -1,8 +1,25 @@
 \section{Ranking với Support Vector Machines}
+\label{sec:ranking-with-svm}
 
 Phần trước đã trình bày chặn tổng quát hoá dựa trên margin cho score-based ranking. Chặn này gợi ý một nguyên lý thiết kế thuật toán tự nhiên: tìm một hàm điểm có lỗi margin thực nghiệm nhỏ, đồng thời kiểm soát độ phức tạp của lớp giả thuyết. Trong phần này, ta trình bày thuật toán ranking dựa trên Support Vector Machines, thường được gọi là \textit{SVM-ranking} hoặc \textit{Ranking SVM}.
 
-Ý tưởng chính của SVM-ranking là biến bài toán ranking theo từng cặp thành một bài toán phân loại nhị phân trên các vector hiệu. Thay vì học trực tiếp từ từng điểm \(x\), thuật toán học từ các cặp \((x_i,x'_i)\) bằng cách xét hiệu đặc trưng giữa hai đối tượng.
+Ý tưởng chính của SVM-ranking là biến bài toán ranking theo từng cặp thành một bài toán phân loại nhị phân trên các vector hiệu. Thay vì học trực tiếp từ từng điểm \(x\), thuật toán học từ các cặp \((x_i,x'_i)\) bằng cách xét hiệu đặc trưng giữa hai đối tượng. Nhờ phép biến đổi này, các công cụ quen thuộc của SVM như margin, slack variable, regularization và kernel trick có thể được áp dụng trực tiếp cho bài toán ranking.
+
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}[>=Stealth, node distance=1.6cm]
+        \node[draw, rounded corners, fill=gray!10, align=center, minimum width=3.5cm, minimum height=1.05cm] (pair)
+        {Cặp đối tượng\\ \((x_i,x'_i,y_i)\)};
+        \node[draw, rounded corners, fill=gray!10, align=center, minimum width=3.8cm, minimum height=1.05cm, right=of pair] (diff)
+        {Vector hiệu\\ \(\Psi(x_i,x'_i)=\Phi(x'_i)-\Phi(x_i)\)};
+        \node[draw, rounded corners, fill=gray!10, align=center, minimum width=3.5cm, minimum height=1.05cm, right=of diff] (svm)
+        {SVM nhị phân\\ trên \((z_i,y_i)\)};
+        \draw[->, thick] (pair) -- (diff);
+        \draw[->, thick] (diff) -- (svm);
+    \end{tikzpicture}
+    \caption{Ý tưởng chính của SVM-ranking: biến mỗi cặp ưu tiên thành một mẫu phân loại trên vector hiệu.}
+    \label{fig:section4-svm-ranking-pipeline}
+\end{figure}
 
 \subsection{Từ chặn margin đến bài toán tối ưu}
 
@@ -31,7 +48,6 @@ Với một cặp huấn luyện \((x_i,x'_i,y_i)\), margin ranking là:
         \Phi(x'_i)-\Phi(x_i)
     \right).
 \]
-
 Do đó, điều kiện một cặp được xếp đúng với margin ít nhất \(1\) là:
 \begin{equation}
     y_i
@@ -56,8 +72,7 @@ Trong thực tế, dữ liệu ranking thường không thể được xếp đ�
     i=1,\ldots,m.
     \label{eq:section4-soft-margin-ranking}
 \end{equation}
-
-Biến \(\xi_i\) đo mức độ vi phạm margin của cặp thứ \(i\). Nếu \(\xi_i=0\), cặp đó đạt margin ít nhất \(1\); nếu \(\xi_i>0\), cặp đó vi phạm một phần hoặc toàn bộ điều kiện margin.
+Biến \(\xi_i\) đo mức độ vi phạm margin của cặp thứ \(i\). Nếu \(\xi_i=0\), cặp đó đạt margin ít nhất \(1\); nếu \(0<\xi_i<1\), cặp vẫn có thể đúng chiều nhưng không đạt đủ margin; nếu \(\xi_i\geq 1\), cặp có thể bị xếp sai hoặc nằm quá gần biên quyết định.
 
 \subsection{Bài toán tối ưu primal của SVM-ranking}
 
@@ -89,6 +104,22 @@ với các ràng buộc:
 
 Trong hàm mục tiêu~\eqref{eq:section4-ranking-svm-primal}, thành phần \(\frac{1}{2}\|w\|_{\mathcal{F}}^2\) kiểm soát độ phức tạp của mô hình, còn \(C\sum_i \xi_i\) đo tổng mức độ vi phạm margin trên tập huấn luyện. Tham số \(C>0\) điều chỉnh sự đánh đổi giữa margin lớn và lỗi huấn luyện nhỏ.
 
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}[>=Stealth, node distance=1.1cm]
+        \node[draw, rounded corners, fill=gray!10, align=center, minimum width=4.1cm, minimum height=1.1cm] (norm)
+        {\(\frac{1}{2}\|w\|^2\)\\ margin lớn, mô hình đơn giản};
+        \node[draw, rounded corners, fill=gray!10, align=center, minimum width=4.1cm, minimum height=1.1cm, right=of norm] (slack)
+        {\(C\sum_i \xi_i\)\\ phạt vi phạm margin};
+        \node[draw, rounded corners, fill=gray!20, align=center, minimum width=4.5cm, minimum height=1.1cm, below=1.2cm of $(norm)!0.5!(slack)$] (obj)
+        {Mục tiêu SVM-ranking\\ cân bằng đơn giản hoá và khớp dữ liệu};
+        \draw[->, thick] (norm.south) -- (obj.north west);
+        \draw[->, thick] (slack.south) -- (obj.north east);
+    \end{tikzpicture}
+    \caption{Hai thành phần trong hàm mục tiêu của SVM-ranking: chuẩn của \(w\) kiểm soát độ phức tạp, còn các biến slack đo mức vi phạm margin.}
+    \label{fig:section4-primal-objective-components}
+\end{figure}
+
 Nếu \(C\) lớn, thuật toán ưu tiên giảm lỗi huấn luyện. Nếu \(C\) nhỏ, thuật toán ưu tiên nghiệm có chuẩn nhỏ hơn, tức là mô hình đơn giản hơn, nhưng có thể chấp nhận nhiều vi phạm margin hơn.
 
 \subsection{Liên hệ với pairwise hinge loss}
@@ -110,7 +141,6 @@ Bài toán tối ưu trên có thể được viết dưới dạng tối thiể
     \right).
     \label{eq:section4-pairwise-hinge-loss}
 \end{equation}
-
 Khi đó, bài toán SVM-ranking tương đương với:
 \begin{equation}
     \min_w
@@ -132,8 +162,7 @@ Khi đó, bài toán SVM-ranking tương đương với:
     \right).
     \label{eq:section4-regularized-pairwise-hinge}
 \end{equation}
-
-Công thức~\eqref{eq:section4-regularized-pairwise-hinge} cho thấy SVM-ranking không tối ưu trực tiếp lỗi pairwise misranking dạng chỉ thị, mà tối ưu một hàm mất mát lồi thay thế là pairwise hinge loss.
+Công thức~\eqref{eq:section4-regularized-pairwise-hinge} cho thấy SVM-ranking không tối ưu trực tiếp lỗi pairwise misranking dạng chỉ thị, mà tối ưu một hàm mất mát lồi thay thế là pairwise hinge loss. Hàm mất mát này phạt các cặp bị xếp sai và cả các cặp đúng nhưng chưa đạt margin \(1\).
 
 \subsection{Ranking như một bài toán SVM trên vector hiệu}
 
@@ -144,7 +173,6 @@ Công thức~\eqref{eq:section4-regularized-pairwise-hinge} cho thấy SVM-ranki
     \Phi(x')-\Phi(x).
     \label{eq:section4-pairwise-feature-map}
 \end{equation}
-
 Khi đó, điều kiện margin trở thành:
 \[
     y_i
@@ -153,7 +181,6 @@ Khi đó, điều kiện margin trở thành:
     \geq
     1-\xi_i.
 \]
-
 Đây chính là dạng ràng buộc quen thuộc của soft-margin SVM trong classification, với mỗi mẫu huấn luyện mới là:
 \[
     \left(
@@ -164,6 +191,22 @@ Khi đó, điều kiện margin trở thành:
 
 Như vậy, SVM-ranking không phải là một thuật toán hoàn toàn tách biệt với SVM. Nó là một trường hợp đặc biệt của SVM, trong đó đặc trưng của một mẫu là hiệu đặc trưng giữa hai đối tượng cần so sánh.
 
+\begin{table}[H]
+    \centering
+    \begin{tabular}{lll}
+        \toprule
+        \textbf{Thành phần} & \textbf{SVM phân loại} & \textbf{SVM-ranking} \\
+        \midrule
+        Mẫu huấn luyện & \((x_i,y_i)\) & \((x_i,x'_i,y_i)\) \\
+        Đặc trưng đầu vào & \(x_i\) & \(\Psi(x_i,x'_i)=\Phi(x'_i)-\Phi(x_i)\) \\
+        Điều kiện margin & \(y_i w^\top x_i\geq 1-\xi_i\) & \(y_i w^\top\Psi(x_i,x'_i)\geq 1-\xi_i\) \\
+        Mục tiêu & phân loại đúng từng điểm & xếp đúng từng cặp ưu tiên \\
+        \bottomrule
+    \end{tabular}
+    \caption{SVM-ranking có cùng cấu trúc với SVM phân loại, nhưng dữ liệu đầu vào là các vector hiệu sinh từ từng cặp đối tượng.}
+    \label{tab:section4-svm-vs-ranking-svm}
+\end{table}
+
 \subsection{Hình học của SVM-ranking}
 
 Sau phép biến đổi \(\Psi(x,x')=\Phi(x')-\Phi(x)\), mỗi cặp đối tượng trở thành một điểm trong không gian vector hiệu. Trong không gian này, SVM-ranking tìm một siêu phẳng phân tách các vector hiệu có nhãn \(+1\) và \(-1\), tương tự SVM phân loại nhị phân.
@@ -173,6 +216,15 @@ Siêu phẳng \(w^\top z=0\), với \(z=\Psi(x,x')\), quyết định xem mô h�
     w^\top \Psi(x,x')>0,
 \]
 thì mô hình có xu hướng xếp \(x'\) cao hơn \(x\). Ngược lại, nếu giá trị này âm, mô hình xếp \(x\) cao hơn \(x'\).
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.82\textwidth]{figures/sec4_svm_ranking_geometry.pdf}
+    \caption{Hình học của SVM-ranking trong không gian vector hiệu \(z=\Psi(x,x')\). Đường \(w^\top z=0\) đóng vai trò siêu phẳng phân tách, còn hai đường biên margin tương ứng với \(w^\top z=1\) và \(w^\top z=-1\). Các điểm có nhãn \(y=+1\) và \(y=-1\) biểu diễn các cặp ưu tiên sau khi được biến đổi thành vector hiệu.}
+    \label{fig:section4-svm-ranking-geometry}
+\end{figure}
+
+Hình~\ref{fig:section4-svm-ranking-geometry} minh hoạ trực quan cách SVM-ranking hoạt động. Sau khi chuyển cặp đối tượng thành vector hiệu \(z\), bài toán ranking trở thành bài toán tìm siêu phẳng phân tách hai nhóm vector hiệu. Các điểm nằm đúng phía và cách xa siêu phẳng ít nhất một khoảng margin sẽ không bị phạt; các điểm nằm trong vùng margin hoặc sai phía sẽ tạo ra slack và đóng góp vào pairwise hinge loss.
 
 Góc nhìn hình học này cho thấy SVM-ranking thực chất là việc học một siêu phẳng phân tách trong không gian các quan hệ so sánh.
 
@@ -210,7 +262,6 @@ Thay định nghĩa \(\Psi(x,x')=\Phi(x')-\Phi(x)\), ta có:
 \end{aligned}
     \label{eq:section4-pairwise-kernel}
 \end{equation}
-
 Tương đương, công thức trên có thể viết là:
 \[
     K'_{ij}
@@ -223,8 +274,23 @@ Tương đương, công thức trên có thể viết là:
     -
     K(x_i,x'_j).
 \]
-
 Công thức~\eqref{eq:section4-pairwise-kernel} cho thấy ta không cần tính trực tiếp ánh xạ \(\Phi\). Chỉ cần có kernel \(K\) giữa các đối tượng ban đầu, ta có thể xây dựng kernel \(K'\) giữa các cặp đối tượng.
+
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}[>=Stealth, node distance=1.2cm]
+        \node[draw, rounded corners, fill=gray!10, align=center, minimum width=3.2cm, minimum height=1cm] (k)
+        {Kernel gốc\\ \(K(x,x')\)};
+        \node[draw, rounded corners, fill=gray!10, align=center, minimum width=4.2cm, minimum height=1cm, right=of k] (kp)
+        {Kernel trên cặp\\ \(K'_{ij}=\Psi_i\cdot\Psi_j\)};
+        \node[draw, rounded corners, fill=gray!10, align=center, minimum width=3.5cm, minimum height=1cm, right=of kp] (dual)
+        {SVM dual\\ không cần tính \(\Phi\)};
+        \draw[->, thick] (k) -- (kp);
+        \draw[->, thick] (kp) -- (dual);
+    \end{tikzpicture}
+    \caption{Kernel trick trong SVM-ranking: từ kernel giữa các đối tượng ban đầu, ta xây dựng kernel giữa các cặp thông qua vector hiệu.}
+    \label{fig:section4-pairwise-kernel-trick}
+\end{figure}
 
 \subsection{Chứng minh liên hệ giữa SVM-ranking và SVM chuẩn}
 
@@ -236,7 +302,6 @@ Ta trình bày ngắn gọn liên hệ giữa SVM-ranking và SVM chuẩn. Với
     =
     \Phi(x'_i)-\Phi(x_i).
 \]
-
 Khi đó, ràng buộc của SVM-ranking:
 \[
     y_i
@@ -253,7 +318,6 @@ trở thành:
     \geq
     1-\xi_i.
 \]
-
 Đây chính là ràng buộc của soft-margin SVM cho bài toán phân loại nhị phân trên tập mẫu \((z_i,y_i)\). Hàm mục tiêu cũng giữ nguyên dạng:
 \[
     \min_{w,\xi}
@@ -264,7 +328,6 @@ trở thành:
     \sum_{i=1}^{m}
     \xi_i.
 \]
-
 Do đó, bài toán SVM-ranking tương đương với soft-margin SVM chuẩn sau khi biến đổi mỗi cặp đối tượng thành một vector hiệu. Điều này giải thích vì sao các tính chất của SVM, như kernel trick và margin maximization, có thể được áp dụng trực tiếp cho ranking.
 
 \subsection{Ví dụ minh hoạ}
@@ -273,7 +336,6 @@ Xét ba tài liệu \(d_1,d_2,d_3\) với thứ tự đúng:
 \[
     d_1 \succ d_2 \succ d_3.
 \]
-
 Giả sử mỗi tài liệu được biểu diễn bởi vector hai chiều:
 \[
     x_1=
@@ -304,7 +366,6 @@ Với cặp \((d_2,d_1)\), vì \(d_1\) được ưu tiên hơn \(d_2\), nhãn l�
         0
     \end{bmatrix}.
 \]
-
 Nếu mô hình có trọng số
 \[
     w=
@@ -317,7 +378,6 @@ thì margin của cặp này là:
 \[
     y_{21}w^\top(x_1-x_2)=1.
 \]
-
 Cặp này đạt đúng margin \(1\). Ví dụ này cho thấy SVM-ranking học một vector \(w\) sao cho hiệu đặc trưng giữa đối tượng được ưu tiên và đối tượng kém ưu tiên có tích vô hướng dương và đủ lớn với \(w\).
 
 \subsection{[MỞ RỘNG] Phân tích độ phức tạp của SVM-ranking}
@@ -331,18 +391,31 @@ SVM-ranking làm việc trên các cặp đối tượng, vì vậy chi phí tí
     O(n^2).
     \label{eq:section4-pair-count}
 \end{equation}
-
 Nếu mỗi đối tượng có \(d\) đặc trưng, việc tính vector hiệu \(x'_i-x_i\) cho một cặp có chi phí \(O(d)\). Do đó, việc tạo toàn bộ dữ liệu pairwise có chi phí:
 \[
     O(n^2d).
 \]
-
 Nếu sử dụng kernel, ta cần xây dựng ma trận kernel trên các cặp. Với \(m\) cặp huấn luyện, ma trận kernel \(K'\) có kích thước \(m\times m\), nên chi phí lưu trữ là:
 \[
     O(m^2).
 \]
-
 Nếu \(m=O(n^2)\), chi phí bộ nhớ trong trường hợp dùng kernel có thể lên tới \(O(n^4)\). Vì vậy, SVM-ranking có thể trở nên rất tốn kém nếu áp dụng trực tiếp cho dữ liệu lớn với toàn bộ các cặp. Trong thực tế, người ta thường dùng lấy mẫu cặp, tối ưu tuyến tính hoặc các thuật toán chuyên biệt cho ranking quy mô lớn.
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{lll}
+        \toprule
+        \textbf{Thao tác} & \textbf{Chi phí} & \textbf{Ghi chú} \\
+        \midrule
+        Tạo toàn bộ cặp & \(O(n^2)\) & Có \(\binom{n}{2}\) cặp \\
+        Tạo vector hiệu & \(O(n^2d)\) & Mỗi cặp cần hiệu hai vector \(d\) chiều \\
+        Huấn luyện tuyến tính trên cặp & phụ thuộc solver, thường theo \(m\) và \(d\) & \(m=O(n^2)\) nếu dùng mọi cặp \\
+        Lưu kernel trên cặp & \(O(m^2)\) & Có thể thành \(O(n^4)\) nếu \(m=O(n^2)\) \\
+        \bottomrule
+    \end{tabular}
+    \caption{Tóm tắt chi phí chính của SVM-ranking khi làm việc trên dữ liệu pairwise.}
+    \label{tab:section4-svm-ranking-complexity}
+\end{table}
 
 \subsection{[MỞ RỘNG] So sánh với SVM phân loại nhị phân}
 
@@ -350,12 +423,10 @@ SVM phân loại nhị phân học từ các mẫu riêng lẻ \((x_i,y_i)\), v�
 \[
     y_i w^\top x_i \geq 1-\xi_i.
 \]
-
 Trong khi đó, SVM-ranking học từ các cặp \((x_i,x'_i,y_i)\), với điều kiện:
 \[
     y_i w^\top(x'_i-x_i)\geq 1-\xi_i.
 \]
-
 Hai công thức có cùng cấu trúc. Điểm khác biệt nằm ở biểu diễn đầu vào: SVM phân loại dùng trực tiếp \(x_i\), còn SVM-ranking dùng vector hiệu \(x'_i-x_i\). Vì vậy, có thể xem SVM-ranking là SVM phân loại nhị phân trên không gian các quan hệ so sánh.
 
 Sự khác biệt này cũng phản ánh khác biệt về mục tiêu. SVM phân loại cố gắng dự đoán đúng nhãn của từng điểm, còn SVM-ranking cố gắng dự đoán đúng thứ tự tương đối giữa hai điểm.
@@ -377,5 +448,7 @@ Phần này đã trình bày thuật toán ranking dựa trên SVM. Từ chặn 
     \Psi(x,x')=\Phi(x')-\Phi(x)
 \]
 cho thấy SVM-ranking thực chất là một trường hợp đặc biệt của SVM chuẩn trên không gian pairwise.
+
+Hình~\ref{fig:section4-svm-ranking-geometry} giúp trực quan hoá ý tưởng này: sau khi biến đổi mỗi cặp thành vector hiệu \(z\), SVM-ranking tìm một siêu phẳng \(w^\top z=0\) để phân tách các cặp được gán nhãn \(+1\) và \(-1\). Các đường margin cho biết vùng an toàn mà mô hình mong muốn các vector hiệu nằm ngoài.
 
 Kết quả này tạo cầu nối giữa lý thuyết ranking và các thuật toán tối ưu margin. Trong phần tiếp theo, ta sẽ nghiên cứu một hướng tiếp cận khác trong score-based ranking: RankBoost.

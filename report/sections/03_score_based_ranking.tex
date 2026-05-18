@@ -1,12 +1,13 @@
 \section{Score-based ranking và chặn tổng quát hoá}
+\label{sec:score-based-ranking-generalization}
 
 Trong phần trước, ta đã giới thiệu các khái niệm cơ bản của bài toán ranking như hàm điểm, quan hệ ưu tiên theo từng cặp, lỗi xếp hạng và margin. Phần này tập trung vào thiết lập \textit{score-based ranking}. Trong thiết lập này, mô hình học một hàm điểm
 \[
     h:\mathcal{X}\rightarrow\mathbb{R},
 \]
-sau đó sinh ranking bằng cách sắp xếp các đối tượng theo điểm số.
+sau đó sinh ranking bằng cách sắp xếp các đối tượng theo điểm số giảm dần.
 
-Mục tiêu chính của phần này là trình bày chặn tổng quát hoá dựa trên margin cho bài toán ranking. Kết quả này cho thấy nếu một hàm điểm có lỗi margin nhỏ trên tập huấn luyện và lớp giả thuyết không quá phức tạp, thì lỗi xếp hạng trên dữ liệu chưa thấy cũng có thể được kiểm soát.
+Mục tiêu chính của phần này là trình bày chặn tổng quát hoá dựa trên margin cho bài toán ranking. Kết quả này cho thấy nếu một hàm điểm có lỗi margin nhỏ trên tập huấn luyện và lớp giả thuyết không quá phức tạp, thì lỗi xếp hạng trên dữ liệu chưa thấy cũng có thể được kiểm soát. Nói cách khác, score-based ranking không chỉ yêu cầu mô hình xếp đúng các cặp đối tượng, mà còn cần tạo ra khoảng cách điểm đủ lớn để thứ tự dự đoán ổn định hơn.
 
 \subsection{Thiết lập score-based ranking}
 
@@ -16,12 +17,11 @@ Gọi \(\mathcal{X}\) là không gian đầu vào. Trong score-based ranking, ta
     \subseteq
     \{h \mid h:\mathcal{X}\rightarrow\mathbb{R}\}.
 \]
-
 Với \(h\in\mathcal{H}\), giá trị \(h(x)\) là điểm số của đối tượng \(x\). Nếu
 \[
     h(x')>h(x),
 \]
-thì mô hình xếp \(x'\) cao hơn \(x\).
+thì mô hình xếp \(x'\) cao hơn \(x\). Vì ranking được sinh ra bằng cách sắp xếp điểm số, mọi thứ tự do hàm điểm tạo ra đều có tính bắc cầu. Đây là ưu điểm về mặt đơn giản hoá mô hình, nhưng cũng là hạn chế nếu quan hệ ưu tiên thật có thể không bắc cầu.
 
 Dữ liệu huấn luyện gồm \(m\) cặp đối tượng có nhãn:
 \[
@@ -30,19 +30,34 @@ Dữ liệu huấn luyện gồm \(m\) cặp đối tượng có nhãn:
     \qquad
     y_i\in\{-1,0,+1\}.
 \]
-
 Các cặp \((x_i,x'_i)\) được lấy từ một phân phối chưa biết \(D\) trên \(\mathcal{X}\times\mathcal{X}\). Nhãn được xác định bởi hàm ưu tiên mục tiêu
 \[
     f:\mathcal{X}\times\mathcal{X}\rightarrow\{-1,0,+1\}.
 \]
+Theo quy ước, \(f(x,x')=+1\) nghĩa là \(x'\) được ưu tiên hơn \(x\), \(f(x,x')=-1\) nghĩa là \(x\) được ưu tiên hơn \(x'\), và \(f(x,x')=0\) nghĩa là hai đối tượng ngang nhau hoặc không có đủ thông tin.
 
-Theo quy ước, \(f(x,x')=+1\) nghĩa là \(x'\) được ưu tiên hơn \(x\), \(f(x,x')=-1\) nghĩa là \(x\) được ưu tiên hơn \(x'\), và \(f(x,x')=0\) nghĩa là hai đối tượng ngang nhau hoặc không có đủ thông tin. Với một cặp có nhãn khác \(0\), hàm điểm \(h\) xếp đúng nếu
+Với một cặp có nhãn khác \(0\), hàm điểm \(h\) xếp đúng nếu
 \begin{equation}
     f(x,x')\big(h(x')-h(x)\big)>0.
     \label{eq:section3-correct-ranking-condition}
 \end{equation}
-
 Nếu biểu thức trên nhỏ hơn hoặc bằng \(0\), mô hình xếp sai hoặc không phân biệt được đúng thứ tự giữa hai đối tượng.
+
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}[>=Stealth, node distance=1.8cm]
+        \node[draw, rounded corners, align=center, fill=gray!10, minimum width=3.2cm, minimum height=1cm] (data)
+        {Dữ liệu cặp\\ \((x,x',y)\)};
+        \node[draw, rounded corners, align=center, fill=gray!10, minimum width=3.2cm, minimum height=1cm, right=of data] (score)
+        {Hàm điểm\\ \(h:\mathcal{X}\to\mathbb{R}\)};
+        \node[draw, rounded corners, align=center, fill=gray!10, minimum width=3.2cm, minimum height=1cm, right=of score] (rank)
+        {Sắp xếp theo\\ điểm số \(h(x)\)};
+        \draw[->, thick] (data) -- (score);
+        \draw[->, thick] (score) -- (rank);
+    \end{tikzpicture}
+    \caption{Quy trình tổng quát của score-based ranking: học hàm điểm từ các cặp ưu tiên, sau đó dùng điểm số để sinh ranking toàn cục.}
+    \label{fig:section3-score-based-pipeline}
+\end{figure}
 
 \subsection{Lỗi tổng quát và lỗi thực nghiệm}
 
@@ -58,7 +73,6 @@ Lỗi tổng quát của hàm điểm \(h\) là xác suất mô hình xếp sai 
     \right].
     \label{eq:section3-generalization-error}
 \end{equation}
-
 Đại lượng \(R(h)\) là lỗi thật mà ta quan tâm, vì nó đo chất lượng ranking trên dữ liệu chưa thấy. Tuy nhiên, do phân phối \(D\) và hàm mục tiêu \(f\) không được biết đầy đủ, ta dùng lỗi thực nghiệm trên mẫu huấn luyện:
 \begin{equation}
     \widehat{R}(h)
@@ -85,7 +99,6 @@ Trong ranking, việc một cặp được xếp đúng chưa hẳn đã đủ. 
     y_i\big(h(x'_i)-h(x_i)\big).
     \label{eq:section3-pairwise-margin}
 \end{equation}
-
 Nếu \(M_i(h)>0\), cặp thứ \(i\) được xếp đúng. Nếu \(M_i(h)\leq 0\), cặp đó bị xếp sai. Với một tham số \(\rho>0\), ta định nghĩa hàm mất mát margin:
 \begin{equation}
     \Phi_{\rho}(u)
@@ -98,7 +111,16 @@ Nếu \(M_i(h)>0\), cặp thứ \(i\) được xếp đúng. Nếu \(M_i(h)\leq 
     \label{eq:section3-margin-loss-function}
 \end{equation}
 
-Hàm \(\Phi_{\rho}\) phạt các cặp bị xếp sai, đồng thời cũng phạt các cặp được xếp đúng nhưng margin nhỏ hơn \(\rho\). Lỗi margin thực nghiệm được định nghĩa bởi:
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.82\textwidth]{figures/sec3_margin_loss_phi.pdf}
+    \caption{Hàm mất mát margin \(\Phi_{\rho}\). Khi \(u\leq 0\), cặp bị xếp sai hoặc hoà nên bị phạt tối đa. Khi \(0<u<\rho\), cặp đã đúng chiều nhưng margin chưa đủ lớn nên vẫn bị phạt tuyến tính. Khi \(u\geq\rho\), cặp được xem là đúng với độ tin cậy đủ lớn và không bị phạt.}
+    \label{fig:section3-margin-loss-phi}
+\end{figure}
+
+Hình~\ref{fig:section3-margin-loss-phi} cho thấy vai trò của tham số \(\rho\). Tham số này đặt ra một ngưỡng an toàn cho hiệu điểm giữa hai đối tượng. Nếu margin chỉ vừa lớn hơn \(0\), mô hình tuy xếp đúng nhưng vẫn thiếu chắc chắn; nếu margin vượt qua \(\rho\), mô hình được xem là đã phân biệt cặp đó đủ rõ.
+
+Lỗi margin thực nghiệm được định nghĩa bởi:
 \begin{equation}
     \widehat{R}_{\rho}(h)
     =
@@ -110,7 +132,6 @@ Hàm \(\Phi_{\rho}\) phạt các cặp bị xếp sai, đồng thời cũng ph�
     \right).
     \label{eq:section3-empirical-margin-loss}
 \end{equation}
-
 Vì
 \[
     \mathbf{1}[u\leq 0]\leq \Phi_{\rho}(u),
@@ -119,7 +140,6 @@ nên lỗi thực nghiệm dạng chỉ thị luôn được chặn trên bởi 
 \[
     \widehat{R}(h)\leq \widehat{R}_{\rho}(h).
 \]
-
 Điều này cho phép ta phân tích ranking thông qua một hàm mất mát mềm hơn và thuận tiện hơn cho việc xây dựng chặn tổng quát hoá.
 
 \subsection{Rademacher complexity}
@@ -147,7 +167,6 @@ Trong bài toán ranking, mỗi mẫu là một cặp \((x_i,x'_i)\). Ta ký hi�
     \qquad
     \mathfrak{R}^{D_2}_m(\mathcal{H}).
 \]
-
 Hai đại lượng này xuất hiện trong chặn tổng quát hoá vì hàm điểm được đánh giá trên cả hai phần tử của mỗi cặp.
 
 \subsection{Định lý chặn margin cho ranking}
@@ -194,6 +213,25 @@ Ngoài ra, ta cũng có dạng chặn theo empirical Rademacher complexity:
     \label{eq:section3-margin-bound-empirical}
 \end{equation}
 
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}[>=Stealth, node distance=0.9cm]
+        \node[draw, rounded corners, fill=gray!10, align=center, minimum width=3.3cm, minimum height=1.2cm] (train)
+        {\(\widehat{R}_{\rho}(h)\)\\ lỗi margin thực nghiệm};
+        \node[draw, rounded corners, fill=gray!10, align=center, minimum width=3.8cm, minimum height=1.2cm, right=of train] (complex)
+        {\(\dfrac{2}{\rho}(\mathfrak{R}^{D_1}_m+\mathfrak{R}^{D_2}_m)\)\\ độ phức tạp mô hình};
+        \node[draw, rounded corners, fill=gray!10, align=center, minimum width=3.3cm, minimum height=1.2cm, right=of complex] (conf)
+        {\(\sqrt{\dfrac{\log(1/\delta)}{2m}}\)\\ độ tin cậy};
+        \node[draw, rounded corners, fill=gray!20, align=center, minimum width=3.3cm, minimum height=1.2cm, below=1.4cm of complex] (gen)
+        {\(R(h)\)\\ lỗi tổng quát};
+        \draw[->, thick] (train.south) -- (gen.north west);
+        \draw[->, thick] (complex.south) -- (gen.north);
+        \draw[->, thick] (conf.south) -- (gen.north east);
+    \end{tikzpicture}
+    \caption{Ba thành phần trong chặn tổng quát hoá: lỗi trên tập huấn luyện, độ phức tạp của lớp giả thuyết và sai số do lấy mẫu hữu hạn.}
+    \label{fig:section3-margin-bound-components}
+\end{figure}
+
 Chặn trên gồm ba thành phần. Thành phần thứ nhất là lỗi margin thực nghiệm \(\widehat{R}_{\rho}(h)\). Thành phần thứ hai phụ thuộc vào độ phức tạp của lớp giả thuyết \(\mathcal{H}\). Thành phần thứ ba phụ thuộc vào kích thước mẫu \(m\) và mức tin cậy \(\delta\).
 
 Định lý cho thấy để lỗi tổng quát \(R(h)\) nhỏ, ta cần đồng thời giảm lỗi margin thực nghiệm và kiểm soát độ phức tạp của lớp giả thuyết. Tham số \(\rho\) tạo ra một sự đánh đổi: nếu \(\rho\) lớn, yêu cầu margin nghiêm ngặt hơn nên lỗi margin thực nghiệm có thể tăng; nếu \(\rho\) nhỏ, hệ số \(1/\rho\) trong thành phần độ phức tạp lại tăng.
@@ -212,7 +250,6 @@ Ta chỉ trình bày ý tưởng chính của chứng minh. Đầu tiên, địn
         h\in\mathcal{H}
     \right\}.
 \]
-
 Sau đó, xét lớp hàm sau khi ghép với margin loss:
 \[
     \Phi_{\rho}\circ\mathcal{H}_{\Delta}
@@ -245,7 +282,6 @@ Vì lớp này nhận giá trị trong \([0,1]\), ta có thể áp dụng chặn
         \frac{\log(1/\delta)}{2m}
     }.
 \]
-
 Do \(\Phi_{\rho}\) là hàm \(1/\rho\)-Lipschitz, theo tính chất contraction của Rademacher complexity:
 \[
     \mathfrak{R}_m
@@ -256,7 +292,6 @@ Do \(\Phi_{\rho}\) là hàm \(1/\rho\)-Lipschitz, theo tính chất contraction 
     \frac{1}{\rho}
     \mathfrak{R}_m(\mathcal{H}_{\Delta}).
 \]
-
 Mặt khác, vì mỗi hàm trong \(\mathcal{H}_{\Delta}\) có dạng hiệu \(h(x')-h(x)\), nên độ phức tạp của lớp này được chặn bởi tổng độ phức tạp trên hai phân phối biên:
 \[
     \mathfrak{R}_m(\mathcal{H}_{\Delta})
@@ -265,7 +300,6 @@ Mặt khác, vì mỗi hàm trong \(\mathcal{H}_{\Delta}\) có dạng hiệu \(h
     +
     \mathfrak{R}^{D_2}_m(\mathcal{H}).
 \]
-
 Thay hai chặn trên vào nhau, ta thu được bất đẳng thức trong Định lý 3.1.
 
 \subsection{[MỞ RỘNG] Giải thích bước Lipschitz của \texorpdfstring{\(\Phi_{\rho}\)}{Phi rho}}
@@ -274,15 +308,13 @@ Từ định nghĩa của \(\Phi_{\rho}\), ta thấy hàm này là hằng số t
 \[
     -\frac{1}{\rho}.
 \]
-
 Do đó, với mọi \(u,v\in\mathbb{R}\), ta có:
 \[
     |\Phi_{\rho}(u)-\Phi_{\rho}(v)|
     \leq
     \frac{1}{\rho}|u-v|.
 \]
-
-Vì vậy, \(\Phi_{\rho}\) là hàm \(1/\rho\)-Lipschitz. Đây là lý do trong bước contraction, Rademacher complexity của lớp sau khi ghép với \(\Phi_{\rho}\) được nhân với hệ số \(1/\rho\).
+Vì vậy, \(\Phi_{\rho}\) là hàm \(1/\rho\)-Lipschitz. Đây là lý do trong bước contraction, Rademacher complexity của lớp sau khi ghép với \(\Phi_{\rho}\) được nhân với hệ số \(1/\rho\). Trực quan từ Hình~\ref{fig:section3-margin-loss-phi}, độ dốc lớn nhất về trị tuyệt đối của đồ thị chính là \(1/\rho\).
 
 \subsection{Hệ quả cho lớp hàm kernel}
 
@@ -296,12 +328,10 @@ Một hệ quả quan trọng của Định lý 3.1 là chặn tổng quát hoá
         \|w\|_{\mathcal{F}}\leq \Lambda
     \right\}.
 \]
-
 Đặt
 \[
     r=\sup_{x\in\mathcal{X}}K(x,x).
 \]
-
 Khi đó, với xác suất ít nhất \(1-\delta\), với mọi \(h\in\mathcal{H}\), ta có:
 \begin{equation}
     R(h)
@@ -335,11 +365,19 @@ Ranking theo từng cặp có thể tốn kém vì số lượng cặp tăng nha
     \label{eq:section3-number-of-pairs}
 \end{equation}
 
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.82\textwidth]{figures/sec3_pair_count_complexity.pdf}
+    \caption{Số cặp ưu tiên tăng theo bậc hai khi số đối tượng \(n\) tăng. Với \(n=100\), nếu xét toàn bộ các cặp không lặp thì có \(\binom{100}{2}=4950\) cặp.}
+    \label{fig:section3-pair-count-complexity}
+\end{figure}
+
+Hình~\ref{fig:section3-pair-count-complexity} minh hoạ vì sao pairwise ranking có thể nhanh chóng trở nên tốn kém khi \(n\) lớn. Chỉ cần tăng số đối tượng, số cặp cần xét tăng nhanh hơn nhiều so với \(n\). Đây là lý do các hệ thống ranking thực tế thường không huấn luyện trên toàn bộ mọi cặp có thể, mà dùng lấy mẫu cặp, mini-batch hoặc các kỹ thuật tối ưu chuyên biệt.
+
 Với mô hình tuyến tính \(h_w(x)=w^\top x\), chi phí tính điểm cho \(n\) đối tượng là \(O(nd)\), và chi phí sắp xếp để tạo ranking là \(O(n\log n)\). Do đó, chi phí suy luận là:
 \[
     O(nd+n\log n).
 \]
-
 Nếu huấn luyện trực tiếp trên toàn bộ các cặp, mỗi cặp cần tính hiệu điểm
 \[
     h_w(x_j)-h_w(x_i)=w^\top(x_j-x_i),
@@ -349,7 +387,21 @@ có chi phí \(O(d)\). Vì vậy, chi phí cho một epoch huấn luyện là:
     O(n^2d).
 \]
 
-Phân tích này cho thấy pairwise ranking có thể trở nên tốn kém với tập dữ liệu lớn. Trong thực tế, người ta thường dùng lấy mẫu cặp, mini-batch training hoặc các kỹ thuật tối ưu chuyên biệt để giảm chi phí.
+\begin{table}[H]
+    \centering
+    \begin{tabular}{lll}
+        \toprule
+        \textbf{Bước xử lý} & \textbf{Chi phí} & \textbf{Ý nghĩa} \\
+        \midrule
+        Tính điểm cho \(n\) đối tượng & \(O(nd)\) & Tính \(h_w(x)=w^\top x\) \\
+        Sắp xếp để tạo ranking & \(O(n\log n)\) & Xếp đối tượng theo điểm giảm dần \\
+        Tạo toàn bộ cặp & \(O(n^2)\) & Số cặp tăng theo \(\binom{n}{2}\) \\
+        Một epoch pairwise training & \(O(n^2d)\) & Tính loss/gradient trên mọi cặp \\
+        \bottomrule
+    \end{tabular}
+    \caption{Tóm tắt độ phức tạp của score-based pairwise ranking với mô hình tuyến tính.}
+    \label{tab:section3-complexity-summary}
+\end{table}
 
 \subsection{Ví dụ minh hoạ về margin}
 
@@ -357,7 +409,6 @@ Xét ba tài liệu \(d_1,d_2,d_3\) với thứ tự đúng:
 \[
     d_1 \succ d_2 \succ d_3.
 \]
-
 Giả sử mô hình dự đoán điểm:
 \[
     h(d_1)=2.0,
@@ -367,6 +418,13 @@ Giả sử mô hình dự đoán điểm:
     h(d_3)=1.1.
 \]
 
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.86\textwidth]{figures/sec3_margin_on_score_axis.pdf}
+    \caption{Minh hoạ margin giữa các tài liệu trên trục điểm số. Cặp \((d_2,d_1)\) có margin lớn hơn, trong khi cặp \((d_3,d_2)\) có margin nhỏ nên kém chắc chắn hơn dù vẫn được xếp đúng.}
+    \label{fig:section3-margin-on-score-axis}
+\end{figure}
+
 Với cặp \((d_2,d_1)\), margin là:
 \[
     M_{21}(h)
@@ -375,7 +433,6 @@ Với cặp \((d_2,d_1)\), margin là:
     =
     0.8.
 \]
-
 Với cặp \((d_3,d_2)\), margin là:
 \[
     M_{32}(h)
@@ -384,8 +441,9 @@ Với cặp \((d_3,d_2)\), margin là:
     =
     0.1.
 \]
+Cả hai cặp đều được xếp đúng vì margin dương. Tuy nhiên, Hình~\ref{fig:section3-margin-on-score-axis} cho thấy hai trường hợp này không có cùng mức độ chắc chắn. Cặp \((d_2,d_1)\) có khoảng cách điểm lớn, còn cặp \((d_3,d_2)\) chỉ cách nhau \(0.1\), nên dễ bị đảo thứ tự nếu điểm dự đoán có nhiễu nhỏ.
 
-Cả hai cặp đều được xếp đúng vì margin dương. Tuy nhiên, nếu chọn \(\rho=0.5\), cặp \((d_3,d_2)\) vẫn bị phạt bởi margin loss vì margin chỉ bằng \(0.1\), nhỏ hơn \(\rho\):
+Nếu chọn \(\rho=0.5\), cặp \((d_3,d_2)\) vẫn bị phạt bởi margin loss vì margin chỉ bằng \(0.1\), nhỏ hơn \(\rho\):
 \[
     \Phi_{0.5}(0.1)
     =
@@ -393,11 +451,12 @@ Cả hai cặp đều được xếp đúng vì margin dương. Tuy nhiên, nế
     =
     0.8.
 \]
-
 Ví dụ này cho thấy margin loss không chỉ quan tâm đến việc xếp đúng hay sai, mà còn quan tâm đến mức độ chắc chắn của thứ tự được dự đoán.
 
 \subsection{Tóm tắt}
 
 Phần này đã trình bày thiết lập score-based ranking, trong đó mô hình học một hàm điểm \(h:\mathcal{X}\rightarrow\mathbb{R}\) và dùng hàm này để sinh thứ tự xếp hạng. Ta đã định nghĩa lỗi tổng quát, lỗi thực nghiệm, margin theo cặp và lỗi margin thực nghiệm. Kết quả chính là chặn tổng quát hoá dựa trên Rademacher complexity, cho thấy lỗi ranking có thể được kiểm soát thông qua lỗi margin thực nghiệm và độ phức tạp của lớp giả thuyết.
+
+Các hình minh hoạ trong phần này giúp làm rõ ba ý chính. Thứ nhất, \(\Phi_{\rho}\) là một surrogate loss mềm hơn lỗi chỉ thị và phạt cả các cặp đúng nhưng margin nhỏ. Thứ hai, margin có thể được hiểu trực quan là khoảng cách điểm giữa hai đối tượng trên trục score. Thứ ba, số lượng cặp trong pairwise ranking tăng theo \(O(n^2)\), khiến việc huấn luyện trực tiếp trên toàn bộ cặp trở nên tốn kém với dữ liệu lớn.
 
 Các kết quả trên cũng giải thích vì sao các thuật toán ranking dựa trên margin thường tìm một hàm điểm vừa có lỗi margin nhỏ, vừa có độ phức tạp được kiểm soát. Đây là cơ sở tự nhiên dẫn đến các phương pháp như Ranking SVM ở phần tiếp theo.

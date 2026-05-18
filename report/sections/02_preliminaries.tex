@@ -1,41 +1,56 @@
 \section{Kiến thức chuẩn bị}
+\label{sec:kien-thuc-chuan-bi}
 
-Chương Ranking nghiên cứu các bài toán học máy trong đó đầu ra của mô hình là một thứ tự xếp hạng giữa các đối tượng, thay vì một nhãn rời rạc hay một giá trị số. Bài toán này xuất hiện trong nhiều ứng dụng như công cụ tìm kiếm, hệ thống gợi ý, truy xuất thông tin, xếp hạng sản phẩm, xếp hạng phim hoặc phát hiện gian lận. Trong các ứng dụng này, việc xác định đối tượng nào nên được đặt ở vị trí cao hơn thường quan trọng hơn việc dự đoán nhãn cho từng đối tượng riêng lẻ.
+Chương Ranking nghiên cứu các bài toán học máy trong đó đầu ra của mô hình là một thứ tự xếp hạng giữa các đối tượng. Khác với phân loại, ranking không chỉ hỏi một mẫu thuộc lớp nào, mà quan tâm đối tượng nào nên đứng trước đối tượng nào. Bài toán này xuất hiện trong công cụ tìm kiếm, hệ thống gợi ý, truy xuất thông tin, xếp hạng sản phẩm, xếp hạng phim và phát hiện gian lận.
 
 \subsection{Bài toán xếp hạng}
 
-Gọi \(\mathcal{X}\) là không gian đầu vào. Mỗi phần tử \(x\in\mathcal{X}\) biểu diễn một đối tượng cần được xếp hạng, chẳng hạn một tài liệu, bộ phim, sản phẩm hoặc giao dịch. Với một tập hữu hạn gồm \(n\) đối tượng, ta viết:
+Gọi \(\mathcal{X}\) là không gian đầu vào. Với một tập hữu hạn gồm \(n\) đối tượng:
 \[
-    X=\{x_1,x_2,\ldots,x_n\}\subseteq \mathcal{X}.
+    X=\{x_1,x_2,\ldots,x_n\}\subseteq \mathcal{X},
 \]
-
-Mục tiêu của ranking là tìm một thứ tự trên \(X\) sao cho các đối tượng quan trọng hơn hoặc liên quan hơn được đặt ở vị trí cao hơn. Nếu \(x_i\) nên được xếp trước \(x_j\), ta viết:
+mục tiêu của ranking là tìm một thứ tự sao cho các đối tượng quan trọng hơn hoặc liên quan hơn được đặt ở vị trí cao hơn. Nếu \(x_i\) nên được xếp trước \(x_j\), ta viết:
 \[
     x_i \succ x_j.
 \]
 
-Một ranking đầy đủ trên \(n\) đối tượng có thể được biểu diễn bởi một hoán vị \(\pi\) của tập chỉ số \(\{1,2,\ldots,n\}\):
+Một ranking đầy đủ có thể được biểu diễn bởi một hoán vị \(\pi\) của tập chỉ số \(\{1,2,\ldots,n\}\):
 \[
     x_{\pi(1)} \succ x_{\pi(2)} \succ \cdots \succ x_{\pi(n)}.
 \]
 
 \subsection{Hàm điểm và ranking dựa trên điểm số}
 
-Một cách phổ biến để xây dựng ranking là học một hàm điểm:
+Một cách phổ biến để tạo ranking là học một hàm điểm:
 \[
     h:\mathcal{X}\rightarrow\mathbb{R}.
 \]
-
-Hàm \(h\) gán cho mỗi đối tượng một giá trị thực. Nếu \(h(x_i)>h(x_j)\), mô hình sẽ xếp \(x_i\) trước \(x_j\). Do đó, ranking do \(h\) sinh ra được xác định bằng cách sắp xếp các đối tượng theo điểm số giảm dần:
+Hàm \(h\) gán cho mỗi đối tượng một điểm số thực. Nếu \(h(x_i)>h(x_j)\), mô hình xếp \(x_i\) cao hơn \(x_j\). Do đó, ranking được tạo bằng cách sắp xếp các đối tượng theo điểm số giảm dần:
 \[
     h(x_{\pi(1)})\geq h(x_{\pi(2)})\geq \cdots \geq h(x_{\pi(n)}).
 \]
 
-Trong nhiều mô hình, mỗi đối tượng được biểu diễn bởi vector đặc trưng \(x_i\in\mathbb{R}^d\). Một lớp hàm điểm quan trọng là lớp hàm tuyến tính:
+Trong nhiều mô hình, mỗi đối tượng được biểu diễn bởi vector đặc trưng \(x_i\in\mathbb{R}^d\). Một lớp hàm điểm đơn giản và quan trọng là hàm tuyến tính:
 \[
     h_w(x)=w^\top x,
 \]
 trong đó \(w\in\mathbb{R}^d\) là vector tham số cần học.
+
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}[>=Stealth]
+        \draw[->, thick] (0,0) -- (10.5,0) node[right] {điểm \(h(x)\)};
+        \foreach \x/\label/\score in {1.2/\(x_4\)/0.4, 3.0/\(x_2\)/1.1, 5.2/\(x_5\)/1.8, 7.4/\(x_1\)/2.6, 9.0/\(x_3\)/3.1} {
+            \draw[fill=gray!30] (\x,0) circle (3pt);
+            \node[above] at (\x,0.05) {\label};
+            \node[below] at (\x,-0.05) {\(\score\)};
+        }
+        \draw[->, thick, dashed] (9.2,0.8) -- (1.0,0.8);
+        \node[above] at (5.1,0.8) {sắp xếp giảm dần theo điểm số};
+    \end{tikzpicture}
+    \caption{Score-based ranking tạo thứ tự bằng cách sắp xếp các đối tượng theo điểm số \(h(x)\).}
+    \label{fig:section2-score-axis-ranking-short}
+\end{figure}
 
 \subsection{Quan hệ ưu tiên theo từng cặp}
 
@@ -44,7 +59,6 @@ Dữ liệu huấn luyện trong ranking thường được cho dưới dạng c
     (x_i,x'_i,y_i)\in
     \mathcal{X}\times\mathcal{X}\times\{-1,0,+1\}.
 \]
-
 Nhãn \(y_i\) biểu diễn quan hệ ưu tiên giữa \(x_i\) và \(x'_i\):
 \[
     y_i =
@@ -60,12 +74,11 @@ Với quy ước này, một cặp được xếp đúng khi:
     y_i\big(h(x'_i)-h(x_i)\big)>0.
     \label{eq:correct-pairwise-ranking}
 \end{equation}
-
-Biểu thức trong công thức~\eqref{eq:correct-pairwise-ranking} cho biết dấu của hiệu điểm giữa hai đối tượng có phù hợp với nhãn ưu tiên hay không.
+Biểu thức trên kiểm tra xem dấu của hiệu điểm giữa hai đối tượng có phù hợp với nhãn ưu tiên hay không.
 
 \subsection{Lỗi xếp hạng theo từng cặp}
 
-Chất lượng của một hàm điểm \(h\) có thể được đo bằng xác suất xếp sai một cặp đối tượng. Gọi \(D\) là phân phối trên \(\mathcal{X}\times\mathcal{X}\) và \(f\) là hàm ưu tiên mục tiêu. Lỗi tổng quát được định nghĩa là:
+Chất lượng của hàm điểm \(h\) có thể được đo bằng xác suất xếp sai một cặp đối tượng. Gọi \(D\) là phân phối trên \(\mathcal{X}\times\mathcal{X}\) và \(f\) là hàm ưu tiên mục tiêu. Lỗi tổng quát được định nghĩa là:
 \begin{equation}
     R(h)
     =
@@ -78,13 +91,12 @@ Chất lượng của một hàm điểm \(h\) có thể được đo bằng xá
     \label{eq:generalization-pairwise-error}
 \end{equation}
 
-Trong thực tế, ta chỉ có mẫu huấn luyện gồm \(m\) cặp:
+Trong thực tế, ta chỉ có mẫu huấn luyện:
 \[
     S =
     \big((x_1,x'_1,y_1),\ldots,(x_m,x'_m,y_m)\big).
 \]
-
-Lỗi thực nghiệm trên mẫu \(S\) là:
+Lỗi thực nghiệm trên \(S\) là:
 \begin{equation}
     \widehat{R}(h)
     =
@@ -98,22 +110,18 @@ Lỗi thực nghiệm trên mẫu \(S\) là:
     \right].
     \label{eq:empirical-pairwise-error}
 \end{equation}
-
-Đây chính là tỉ lệ các cặp trong tập huấn luyện bị mô hình xếp sai.
+Đây là tỉ lệ các cặp huấn luyện bị mô hình xếp sai hoặc không phân biệt được đúng chiều.
 
 \subsection{Margin trong ranking}
 
-Tương tự classification, ranking cũng có thể được phân tích thông qua margin. Với một cặp huấn luyện \((x_i,x'_i,y_i)\), margin theo cặp được định nghĩa là:
+Tương tự classification, ranking cũng có thể được phân tích thông qua margin. Với một cặp \((x_i,x'_i,y_i)\), margin theo cặp là:
 \begin{equation}
     M_i(h)
     =
     y_i\big(h(x'_i)-h(x_i)\big).
     \label{eq:pairwise-margin}
 \end{equation}
-
-Nếu \(M_i(h)>0\), cặp thứ \(i\) được xếp đúng. Nếu \(M_i(h)\leq 0\), cặp đó bị xếp sai hoặc không được phân biệt rõ ràng.
-
-Với một ngưỡng \(\rho>0\), lỗi margin thực nghiệm được viết dưới dạng:
+Nếu \(M_i(h)>0\), cặp được xếp đúng. Nếu \(M_i(h)\leq 0\), cặp bị xếp sai hoặc hoà điểm. Với một ngưỡng \(\rho>0\), lỗi margin thực nghiệm được viết là:
 \begin{equation}
     \widehat{R}_{\rho}(h)
     =
@@ -125,25 +133,21 @@ Với một ngưỡng \(\rho>0\), lỗi margin thực nghiệm được viết d
     \right),
     \label{eq:empirical-margin-loss}
 \end{equation}
-trong đó \(\Phi_{\rho}\) là hàm mất mát margin.
+trong đó \(\Phi_{\rho}\) là hàm mất mát margin. Trực giác là mô hình không chỉ cần xếp đúng, mà còn cần tạo ra khoảng cách điểm đủ lớn giữa hai đối tượng.
 
 \subsection{Score-based ranking và preference-based ranking}
 
-Có hai thiết lập chính trong ranking.
-
-Trong \textit{score-based ranking}, mô hình học một hàm điểm:
+Có hai thiết lập chính trong ranking. Trong \textit{score-based ranking}, mô hình học một hàm điểm:
 \[
-    h:\mathcal{X}\rightarrow\mathbb{R}.
+    h:\mathcal{X}\rightarrow\mathbb{R},
 \]
-Ranking được sinh ra bằng cách sắp xếp các đối tượng theo giá trị của \(h\).
+rồi sinh ranking bằng cách sắp xếp các đối tượng theo điểm số.
 
-Trong \textit{preference-based ranking}, mô hình học trực tiếp một hàm ưu tiên trên từng cặp đối tượng:
+Trong \textit{preference-based ranking}, mô hình học trực tiếp một hàm ưu tiên:
 \[
     h:\mathcal{X}\times\mathcal{X}\rightarrow[0,1].
 \]
-Giá trị \(h(u,v)\) càng lớn thì mô hình càng tin rằng \(u\) nên được xếp trước \(v\).
-
-Sự khác nhau giữa hai thiết lập có thể tóm tắt như sau:
+Giá trị \(h(u,v)\) càng lớn thì mô hình càng tin rằng \(u\) nên được xếp trước \(v\). Có thể tóm tắt sự khác nhau như sau:
 \[
     \text{score-based: } x\mapsto h(x),
     \qquad
@@ -158,10 +162,11 @@ Một trường hợp quan trọng của ranking là \textit{bipartite ranking},
     \qquad
     \mathcal{X}_{+}\cap\mathcal{X}_{-}=\varnothing.
 \]
-
-Mục tiêu là học một hàm điểm \(h\) sao cho các điểm positive được xếp cao hơn các điểm negative. Với \(x^{+}\in\mathcal{X}_{+}\) và \(x^{-}\in\mathcal{X}_{-}\), điều kiện xếp hạng đúng là:
+Mục tiêu là học một hàm điểm \(h\) sao cho các điểm positive được xếp cao hơn các điểm negative:
 \[
-    h(x^{+})>h(x^{-}).
+    h(x^{+})>h(x^{-}),
+    \qquad
+    x^{+}\in\mathcal{X}_{+},\ x^{-}\in\mathcal{X}_{-}.
 \]
 
 Nếu có \(m\) positive points và \(n\) negative points, lỗi thực nghiệm trong bipartite ranking là:
@@ -178,7 +183,7 @@ Nếu có \(m\) positive points và \(n\) negative points, lỗi thực nghiệm
     \label{eq:bipartite-empirical-error}
 \end{equation}
 
-Một độ đo phổ biến trong thiết lập này là AUC. AUC có thể được hiểu là tỉ lệ các cặp positive-negative được xếp đúng:
+AUC có thể được hiểu là tỉ lệ các cặp positive-negative được xếp đúng:
 \begin{equation}
     \mathrm{AUC}(h)
     =
@@ -191,7 +196,6 @@ Một độ đo phổ biến trong thiết lập này là AUC. AUC có thể đ�
     \right].
     \label{eq:auc-definition}
 \end{equation}
-
 Do đó, nếu bỏ qua trường hợp hoà điểm hoặc xử lý hoà điểm theo một quy ước cố định, ta có:
 \begin{equation}
     \mathrm{AUC}(h)=1-\widehat{R}(h).
@@ -200,4 +204,4 @@ Do đó, nếu bỏ qua trường hợp hoà điểm hoặc xử lý hoà điể
 
 \subsection{Tóm tắt}
 
-Phần này đã giới thiệu các khái niệm nền tảng của bài toán ranking. Một ranking có thể được biểu diễn bằng một hoán vị hoặc được sinh ra từ một hàm điểm. Trong score-based ranking, mô hình học hàm \(h:\mathcal{X}\rightarrow\mathbb{R}\), còn trong preference-based ranking, mô hình học trực tiếp quan hệ ưu tiên giữa từng cặp đối tượng. Lỗi ranking thường được đo bằng tỉ lệ cặp bị xếp sai. Riêng trong bipartite ranking, mục tiêu là xếp positive points cao hơn negative points, và AUC là độ đo tương ứng với tỉ lệ các cặp positive-negative được xếp đúng.
+Phần này đã giới thiệu các khái niệm nền tảng của bài toán ranking. Ranking có thể được sinh ra từ một hàm điểm hoặc từ quan hệ ưu tiên theo từng cặp. Trong score-based ranking, mô hình học \(h:\mathcal{X}\rightarrow\mathbb{R}\); trong preference-based ranking, mô hình học trực tiếp \(h:\mathcal{X}\times\mathcal{X}\rightarrow[0,1]\). Lỗi ranking thường được đo bằng tỉ lệ cặp bị xếp sai. Riêng trong bipartite ranking, AUC đo tỉ lệ các cặp positive-negative được xếp đúng.

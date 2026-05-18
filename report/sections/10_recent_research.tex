@@ -1,0 +1,213 @@
+\section{Tổng hợp và thảo luận các bài báo liên quan}
+
+Sau khi trình bày các khái niệm nền tảng của learning-to-rank, phần này tổng hợp một số bài báo liên quan nhằm làm rõ cách các lý thuyết trong chương được sử dụng và mở rộng trong các nghiên cứu hiện đại. Các bài báo được chọn đại diện cho ba hướng phát triển khác nhau: tối ưu metric ranking trong các mô hình boosting, diễn giải decision-focused learning như một bài toán ranking, và phân tích lý thuyết cho label ranking trong điều kiện có nhiễu.
+
+Với mỗi bài báo, ta trình bày ba nội dung chính: bài toán đặt ra, đóng góp chính và mối liên hệ với các lý thuyết đã trình bày trong chương. Cuối phần là nhận xét tổng quan về xu hướng phát triển của lĩnh vực, các hạn chế còn tồn tại và một số câu hỏi mở.
+
+\subsection{Bài báo 1: Which Tricks are Important for Learning to Rank?}
+
+Bài báo \textit{Which Tricks are Important for Learning to Rank?} nghiên cứu các thuật toán learning-to-rank dựa trên gradient-boosted decision trees, trong đó có LambdaMART, YetiRank, StochasticRank và biến thể mới YetiLoss. Bối cảnh của bài báo là các hệ thống learning-to-rank thực tế, đặc biệt trong truy xuất thông tin, nơi mô hình cần xếp hạng danh sách tài liệu theo mức độ liên quan với truy vấn.
+
+\subsubsection{Bài toán đặt ra}
+
+Bài toán chính của bài báo là tìm hiểu những yếu tố kỹ thuật nào thực sự quan trọng khi huấn luyện mô hình learning-to-rank. Cụ thể, bài báo đặt ra các câu hỏi:
+
+\begin{itemize}
+    \item Có nên tối ưu trực tiếp một ranking loss đã được làm trơn hay nên tối ưu một surrogate loss lồi?
+    \item Việc làm trơn ranking loss bằng nhiễu ngẫu nhiên có giúp cải thiện chất lượng mô hình không?
+    \item Các cách xây dựng upper bound khác nhau ảnh hưởng như thế nào đến hiệu quả của thuật toán?
+    \item Liệu có thể mở rộng YetiRank để tối ưu các metric cụ thể như MRR, MAP, ERR hay NDCG không?
+\end{itemize}
+
+Đây là bài toán quan trọng vì ranking loss thường phụ thuộc vào phép sắp xếp, mà phép sắp xếp là không khả vi. Do đó, các thuật toán học như gradient boosting không thể tối ưu trực tiếp ranking metric nếu không có một dạng surrogate hoặc một cách làm trơn phù hợp.
+
+\subsubsection{Đóng góp chính}
+
+Đóng góp đầu tiên của bài báo là phân tích các thuật toán GBDT-based learning-to-rank trong cùng một thiết lập thực nghiệm. Thay vì chỉ so sánh kết quả cuối cùng, bài báo phân tích vai trò của từng thành phần như smoothing, convex upper bound và cách chọn các cặp tài liệu dùng trong gradient.
+
+Đóng góp thứ hai là chỉ ra rằng YetiRank ngầm tối ưu một dạng biến thể của DCG với discount hàm mũ. Từ quan sát này, bài báo đề xuất YetiLoss, một biến thể của YetiRank cho phép thay đổi trọng số gradient theo ranking metric mong muốn. Nhờ đó, YetiLoss có thể tối ưu các metric như MRR, MAP hoặc ERR thay vì chỉ phù hợp với một dạng DCG cố định.
+
+Đóng góp thứ ba là kết quả thực nghiệm trên nhiều bộ dữ liệu learning-to-rank chuẩn. Bài báo cho thấy YetiRank đạt kết quả rất tốt với NDCG, trong khi YetiLoss thường tốt hơn với MAP và MRR. Ngoài ra, bài báo cũng chỉ ra rằng smoothing có vai trò quan trọng: khi bỏ smoothing, chất lượng của YetiLoss giảm rõ rệt.
+
+\subsubsection{Liên hệ với lý thuyết trong chương}
+
+Bài báo này liên hệ trực tiếp với phần score-based ranking. Mô hình học một hàm điểm \(f(x)\), sau đó sắp xếp các tài liệu theo điểm số để tạo ranking. Đây chính là thiết lập:
+\[
+    x \mapsto f(x),
+\]
+trong đó ranking được sinh ra bằng cách sắp xếp các giá trị \(f(x)\).
+
+Bài báo cũng liên hệ với phần ranking loss và các tiêu chí đánh giá như NDCG, MAP, MRR và ERR. Trong chương, ta đã thấy các metric này không chỉ đo cặp đúng sai như pairwise loss, mà còn nhấn mạnh vị trí của tài liệu trong danh sách. Bài báo mở rộng ý tưởng này bằng cách nghiên cứu cách tối ưu trực tiếp hoặc gián tiếp các metric đó trong mô hình GBDT.
+
+Ngoài ra, bài báo còn liên hệ với phần surrogate loss. Vì ranking loss không khả vi, các thuật toán như LambdaMART xây dựng upper bound khả vi để tối ưu. YetiLoss cũng dùng surrogate nhưng khác LambdaMART ở chỗ nó chỉ xét các hoán vị lân cận trong ranking sau khi thêm nhiễu. Điều này gần với trực giác rằng một bước cập nhật nhỏ của mô hình chỉ có thể làm thay đổi cục bộ thứ tự ranking.
+
+\subsubsection{Hạn chế và nhận xét}
+
+Một hạn chế của bài báo là phạm vi phân tích chủ yếu tập trung vào mô hình GBDT. Đây là lựa chọn hợp lý vì GBDT vẫn rất mạnh trên dữ liệu bảng, nhưng kết luận của bài báo chưa chắc chuyển trực tiếp sang các mô hình neural ranking. Ngoài ra, YetiLoss cho kết quả tốt với MAP và MRR, nhưng với NDCG thì YetiRank vẫn thường mạnh hơn. Điều này cho thấy không có một thuật toán duy nhất tối ưu cho mọi metric.
+
+Một hướng mở tự nhiên là nghiên cứu liệu các kết luận về smoothing, local permutation và convex surrogate có còn đúng trong neural rankers, recommender systems hoặc các bài toán ranking có dữ liệu đa phương thức hay không.
+
+\subsection{Bài báo 2: Decision-Focused Learning: Through the Lens of Learning to Rank}
+
+Bài báo \textit{Decision-Focused Learning: Through the Lens of Learning to Rank} mở rộng learning-to-rank sang một bối cảnh khác: decision-focused learning, hay còn gọi là predict-and-optimize. Trong thiết lập này, mô hình học máy không chỉ dự đoán một đại lượng trung gian, mà dự đoán các tham số được đưa vào một bài toán tối ưu tổ hợp ở bước sau.
+
+\subsubsection{Bài toán đặt ra}
+
+Trong predict-and-optimize, ta thường có một bài toán tối ưu tổ hợp với hàm mục tiêu phụ thuộc vào một vector tham số chưa biết \(c\). Mô hình học máy nhận đầu vào \(x\) và dự đoán \(\hat{c}\). Sau đó, lời giải tối ưu được tính bằng cách giải bài toán tối ưu với \(\hat{c}\). Mục tiêu cuối cùng không phải là dự đoán \(\hat{c}\) thật gần \(c\), mà là tạo ra quyết định có regret nhỏ.
+
+Bài toán có thể viết ở dạng:
+\begin{equation}
+    v^\star(c)
+    \in
+    \arg\min_{v\in V}
+    f(v,c),
+    \label{eq:section10-dfl-optimization}
+\end{equation}
+trong đó \(V\) là tập nghiệm khả thi của bài toán tối ưu tổ hợp. Regret của dự đoán \(\hat{c}\) được định nghĩa là:
+\begin{equation}
+    \mathrm{Regret}(\hat{c},c)
+    =
+    f(v^\star(\hat{c}),c)
+    -
+    f(v^\star(c),c).
+    \label{eq:section10-dfl-regret}
+\end{equation}
+
+Khó khăn chính là ánh xạ \(\hat{c}\mapsto v^\star(\hat{c})\) thường không khả vi vì \(V\) là tập rời rạc. Do đó, việc lan truyền gradient qua bộ giải tối ưu tổ hợp là rất khó và tốn kém.
+
+\subsubsection{Đóng góp chính}
+
+Đóng góp quan trọng nhất của bài báo là diễn giải decision-focused learning như một bài toán learning-to-rank. Với mỗi instance, các nghiệm khả thi \(v\in V\) được xem như các ``items'' cần xếp hạng. Hàm mục tiêu \(f(v,c)\) tạo ra thứ tự đúng trên các nghiệm khả thi: nghiệm có giá trị mục tiêu nhỏ hơn nên được xếp cao hơn.
+
+Từ góc nhìn này, thay vì cố gắng đạo hàm trực tiếp qua nghiệm tối ưu \(v^\star(\hat{c})\), bài báo đề xuất học sao cho hàm mục tiêu dự đoán \(f(v,\hat{c})\) tạo ra cùng thứ tự với hàm mục tiêu thật \(f(v,c)\) trên một tập con nghiệm khả thi \(S\subseteq V\). Vì không thể liệt kê toàn bộ \(V\), bài báo dùng một tập nghiệm con \(S\) và cập nhật dần trong quá trình huấn luyện.
+
+Bài báo đề xuất ba nhóm loss theo learning-to-rank:
+
+\begin{itemize}
+    \item \textit{Pointwise loss}: so khớp giá trị mục tiêu dự đoán và giá trị mục tiêu thật trên từng nghiệm.
+    \item \textit{Pairwise loss}: yêu cầu nghiệm tốt hơn theo \(c\) cũng phải có điểm tốt hơn theo \(\hat{c}\).
+    \item \textit{Listwise loss}: so sánh phân phối xác suất trên toàn bộ danh sách nghiệm trong tập \(S\).
+\end{itemize}
+
+Đặc biệt, bài báo chỉ ra rằng loss noise-contrastive estimation trong nghiên cứu trước có thể được xem như một trường hợp đặc biệt của pairwise ranking theo dạng best-versus-rest.
+
+\subsubsection{Liên hệ với lý thuyết trong chương}
+
+Bài báo này liên hệ rõ với cả score-based ranking và pairwise ranking. Trong chương, ta học hàm điểm \(h(x)\) để sắp xếp các đối tượng. Ở đây, đối tượng cần xếp hạng không phải là tài liệu hay sản phẩm, mà là các nghiệm khả thi \(v\) của một bài toán tối ưu. Hàm điểm tương ứng là:
+\[
+    v \mapsto -f(v,\hat{c}),
+\]
+nếu bài toán là bài toán cực tiểu. Nghiệm có giá trị mục tiêu nhỏ hơn sẽ có điểm ranking cao hơn.
+
+Pairwise loss trong bài báo cũng rất gần với Ranking SVM và pairwise hinge loss đã trình bày. Với một cặp nghiệm \((v^p,v^q)\), nếu \(v^p\) tốt hơn \(v^q\) theo \(c\), ta muốn:
+\[
+    f(v^p,\hat{c}) < f(v^q,\hat{c}).
+\]
+Dạng margin ranking loss của bài báo có cùng tinh thần với pairwise hinge loss: không chỉ yêu cầu đúng thứ tự, mà còn muốn có một khoảng cách đủ lớn giữa nghiệm tốt và nghiệm kém hơn.
+
+Bài báo cũng liên hệ với phần preference-based ranking. Trong decision-focused learning, ta có thể xem mỗi cặp nghiệm khả thi như một cặp ưu tiên. Nếu nghiệm \(v^p\) cho giá trị mục tiêu tốt hơn \(v^q\), thì \(v^p\succ v^q\). Do đó, học để giảm regret có thể được xem như học để bảo toàn quan hệ ưu tiên giữa các nghiệm.
+
+\subsubsection{Hạn chế và nhận xét}
+
+Điểm mạnh của bài báo là kết nối hai lĩnh vực tưởng như khác nhau: decision-focused learning và learning-to-rank. Tuy nhiên, phương pháp vẫn phụ thuộc vào tập nghiệm con \(S\). Nếu \(S\) không chứa các nghiệm quan trọng, loss ranking có thể không phản ánh đúng regret thật. Ngoài ra, việc mở rộng \(S\) vẫn cần gọi solver trong quá trình huấn luyện, dù số lần gọi solver có thể được kiểm soát.
+
+Một hướng cải tiến là thiết kế chiến lược chọn nghiệm \(S\) thông minh hơn, chẳng hạn ưu tiên các nghiệm gần tối ưu, các nghiệm dễ gây nhầm lẫn hoặc các nghiệm nằm gần biên quyết định của mô hình. Điều này tương tự hard negative mining trong ranking và retrieval.
+
+\subsection{Bài báo 3: Linear Label Ranking with Bounded Noise}
+
+Bài báo \textit{Linear Label Ranking with Bounded Noise} nghiên cứu bài toán label ranking dưới góc nhìn lý thuyết học máy. Khác với các bài báo thực nghiệm về ranking trong truy xuất thông tin, bài báo này tập trung vào khả năng học một hàm xếp hạng tuyến tính khi dữ liệu nhãn ranking có nhiễu bị chặn.
+
+\subsubsection{Bài toán đặt ra}
+
+Trong label ranking, mỗi đầu vào \(x\in\mathbb{R}^d\) không chỉ có một nhãn đơn, mà có một hoán vị trên \(k\) nhãn. Một lớp mô hình tự nhiên là Linear Sorting Function, trong đó mỗi nhãn \(i\) có một vector trọng số \(W_i\), và ranking được tạo bằng cách sắp xếp các điểm:
+\[
+    W_1x,\; W_2x,\;\ldots,\;W_kx.
+\]
+
+Hàm mục tiêu có dạng:
+\begin{equation}
+    \sigma_W(x)
+    =
+    \operatorname{argsort}(Wx).
+    \label{eq:section10-linear-sorting-function}
+\end{equation}
+
+Bài toán đặt ra là: nếu các ranking quan sát được bị nhiễu nhưng xác suất đảo sai mỗi cặp bị chặn bởi một hằng số \(\eta<1/2\), liệu ta có thể học được một hàm xếp hạng tuyến tính gần với hàm mục tiêu hay không? Độ gần được đo bằng Kendall tau distance, tức là tỉ lệ cặp nhãn bị đảo thứ tự.
+
+\subsubsection{Đóng góp chính}
+
+Đóng góp chính của bài báo là đưa ra thuật toán học cho Linear Sorting Functions trong điều kiện bounded noise. Ý tưởng cơ bản là chuyển bài toán ranking nhiều nhãn thành nhiều bài toán phân loại nhị phân theo cặp nhãn.
+
+Cụ thể, với mỗi cặp nhãn \((i,j)\), ta xét xem trong ranking quan sát được nhãn nào đứng trước. Điều này tạo ra một bài toán học halfspace với nhãn nhị phân. Vì nhiễu trên ranking bị chặn, mỗi bài toán nhị phân này có thể được xem như học halfspace dưới Massart noise. Sau khi học các bộ phân loại theo từng cặp, thuật toán ghép các quan hệ cặp thành một ranking toàn cục.
+
+Khi các quan hệ cặp tạo ra chu trình, bài báo dùng bài toán minimum feedback arc set để loại bỏ các mâu thuẫn và tạo ra một ranking hợp lệ. Kết quả lý thuyết cho thấy có thể đạt sai số nhỏ theo Kendall tau distance với số mẫu và thời gian chạy đa thức theo các tham số chính.
+
+Bài báo cũng trình bày phiên bản proper learning, trong đó thuật toán không chỉ tạo ra một bộ phân loại cặp riêng lẻ, mà còn tìm lại một Linear Sorting Function thật sự. Điều này được thực hiện thông qua một chương trình lồi trên ma trận \(W\).
+
+\subsubsection{Liên hệ với lý thuyết trong chương}
+
+Bài báo này liên hệ trực tiếp với phần preference-based ranking và Kendall tau distance. Trong preference-based ranking, ta học quan hệ ưu tiên theo từng cặp rồi cần chuyển các quan hệ đó thành ranking toàn cục. Bài báo này làm đúng điều đó trong bối cảnh label ranking: mỗi cặp nhãn \((i,j)\) được học bằng một halfspace, sau đó các dự đoán cặp được ghép thành một thứ tự đầy đủ.
+
+Bài báo cũng liên hệ với phần sort-by-degree và randomized QuickSort theo nghĩa rộng: cả ba đều xử lý bài toán chuyển quan hệ cặp thành ranking toàn cục. Tuy nhiên, bài báo này dùng công cụ lý thuyết mạnh hơn, cụ thể là đồ thị tournament và minimum feedback arc set, để xử lý trường hợp quan hệ cặp không nhất quán.
+
+Ngoài ra, việc dùng Kendall tau distance làm thước đo sai số phù hợp với phần tiêu chí đánh giá ranking đã trình bày. Kendall tau đo tỉ lệ cặp bị đảo, nên rất tự nhiên khi phân tích các thuật toán học dựa trên cặp nhãn.
+
+\subsubsection{Hạn chế và nhận xét}
+
+Hạn chế chính của hướng tiếp cận này là tính lý thuyết cao và giả định tương đối mạnh. Phân tích thường dựa trên mô hình nhiễu bị chặn và phân phối đầu vào có cấu trúc tốt, chẳng hạn Gaussian hoặc log-concave. Trong dữ liệu thực tế, nhiễu có thể không đồng đều, phụ thuộc vào từng vùng dữ liệu hoặc từng cặp nhãn.
+
+Ngoài ra, số lượng cặp nhãn là \(O(k^2)\), nên khi số nhãn \(k\) lớn, việc học tất cả các bộ phân loại cặp có thể tốn kém. Đây cũng là hạn chế chung của nhiều phương pháp pairwise ranking.
+
+Một hướng mở là kết hợp lý thuyết bounded noise với các mô hình thực nghiệm hiện đại, chẳng hạn neural ranking hoặc gradient boosting, để vừa giữ được bảo đảm lý thuyết vừa có khả năng áp dụng trên dữ liệu lớn.
+
+\subsection{Nhận xét tổng quan về xu hướng phát triển}
+
+Từ ba bài báo trên, có thể thấy learning-to-rank đang phát triển theo ba xu hướng chính.
+
+\subsubsection{Từ pairwise ranking sang tối ưu metric trực tiếp}
+
+Các phương pháp cổ điển như Ranking SVM hay RankBoost thường tối ưu pairwise loss. Tuy nhiên, trong các ứng dụng thực tế, metric cuối cùng thường là NDCG, MAP, MRR hoặc ERR. Bài báo về YetiLoss cho thấy xu hướng hiện đại là thiết kế thuật toán sao cho gần hơn với metric thực sự được quan tâm. Thay vì chỉ đếm số cặp đúng sai, các thuật toán mới cố gắng đưa thông tin về vị trí trong danh sách và độ quan trọng của từng metric vào gradient.
+
+\subsubsection{Sử dụng smoothing và surrogate loss để xử lý tính không khả vi}
+
+Một vấn đề trung tâm của ranking là phép sắp xếp không khả vi. Các bài báo hiện đại xử lý vấn đề này theo hai hướng: xây dựng surrogate loss khả vi hoặc làm trơn ranking loss bằng nhiễu ngẫu nhiên. LambdaMART dùng upper bound khả vi, YetiRank và YetiLoss dùng smoothing trên thứ tự ranking, còn StochasticRank tối ưu loss được làm trơn trực tiếp. Điều này cho thấy smoothing và surrogate loss là hai công cụ quan trọng để kết nối ranking metric rời rạc với các thuật toán tối ưu gradient.
+
+\subsubsection{Mở rộng learning-to-rank ra ngoài truy xuất thông tin}
+
+Bài báo về decision-focused learning cho thấy learning-to-rank không chỉ dùng cho tìm kiếm tài liệu hay hệ gợi ý. Khi các nghiệm khả thi của một bài toán tối ưu tổ hợp được xem như các items cần xếp hạng, ta có thể dùng ranking loss để huấn luyện mô hình dự đoán tham số. Đây là một hướng mở rộng quan trọng, vì nó biến learning-to-rank thành một công cụ chung cho các bài toán ra quyết định.
+
+\subsubsection{Tăng cường phân tích lý thuyết cho ranking có nhiễu}
+
+Bài báo về Linear Label Ranking with Bounded Noise cho thấy một hướng khác: xây dựng bảo đảm học được trong môi trường có nhiễu. Thay vì chỉ đánh giá thực nghiệm, bài báo phân tích số mẫu, độ phức tạp thuật toán và sai số theo Kendall tau distance. Điều này bổ sung nền tảng lý thuyết cho các phương pháp pairwise và preference-based ranking.
+
+\subsection{Hạn chế chung của các phương pháp}
+
+Dù các hướng tiếp cận trên có nhiều đóng góp, vẫn còn một số hạn chế chung.
+
+Thứ nhất, nhiều phương pháp ranking vẫn phụ thuộc mạnh vào surrogate loss. Surrogate loss giúp tối ưu dễ hơn, nhưng không phải lúc nào cũng khớp hoàn toàn với metric cuối cùng. Ví dụ, tối ưu pairwise loss có thể không tối ưu tốt NDCG@10 nếu các lỗi ở đầu danh sách quan trọng hơn nhiều so với lỗi ở cuối danh sách.
+
+Thứ hai, các phương pháp pairwise thường có chi phí lớn vì số cặp tăng theo \(O(n^2)\) hoặc \(O(k^2)\). Điều này xuất hiện trong Ranking SVM, RankBoost, preference-based ranking và cả label ranking theo cặp nhãn. Khi số đối tượng hoặc số nhãn lớn, cần có chiến lược lấy mẫu cặp hoặc chọn cặp quan trọng.
+
+Thứ ba, nhiều kết quả lý thuyết cần giả định khá mạnh, chẳng hạn nhiễu bị chặn, phân phối đầu vào chuẩn hoặc log-concave. Những giả định này giúp phân tích rõ ràng, nhưng có thể không phản ánh đầy đủ dữ liệu thực tế.
+
+Thứ tư, trong các hệ thống thực tế, ranking thường chịu ảnh hưởng của nhiều yếu tố khác như fairness, robustness, distribution shift, cold-start và feedback loop. Các yếu tố này chưa được xử lý đầy đủ trong các mô hình lý thuyết cơ bản.
+
+\subsection{Câu hỏi mở và ý tưởng cải tiến}
+
+Một số câu hỏi mở tự nhiên từ các bài báo trên là:
+
+\begin{itemize}
+    \item Làm thế nào để tối ưu trực tiếp các metric như NDCG, MAP hoặc MRR mà vẫn có bảo đảm hội tụ và tổng quát hoá?
+    \item Có thể thiết kế surrogate loss vừa khả vi, vừa bám sát metric cuối cùng hơn pairwise hinge loss hay không?
+    \item Trong preference-based ranking, làm thế nào để xử lý quan hệ ưu tiên không bắc cầu một cách hiệu quả khi số đối tượng rất lớn?
+    \item Với decision-focused learning, nên chọn tập nghiệm con \(S\) như thế nào để vừa giảm chi phí gọi solver, vừa giữ được thông tin quan trọng cho regret?
+    \item Các bảo đảm lý thuyết trong label ranking có thể mở rộng sang neural networks hoặc dữ liệu không Gaussian hay không?
+\end{itemize}
+
+Từ các câu hỏi trên, có thể đề xuất một số ý tưởng cải tiến. Với các thuật toán pairwise, có thể dùng hard pair mining, tức là chỉ chọn các cặp mà mô hình đang dễ nhầm hoặc các cặp ảnh hưởng lớn đến metric top-\(k\). Với decision-focused learning, có thể cập nhật tập nghiệm \(S\) bằng cách kết hợp nghiệm tối ưu thật, nghiệm dự đoán hiện tại và các nghiệm gần tối ưu. Với các thuật toán như YetiLoss, có thể thử nghiệm các phân phối smoothing khác nhau hoặc học tham số smoothing thay vì cố định trước.
+
+\subsection{Kết luận}
+
+Ba bài báo được trình bày cho thấy learning-to-rank là một lĩnh vực có cả chiều sâu lý thuyết lẫn giá trị thực tiễn. Bài báo về YetiLoss tập trung vào tối ưu metric ranking trong các mô hình GBDT hiện đại. Bài báo về decision-focused learning cho thấy ranking có thể được dùng để huấn luyện mô hình ra quyết định trong tối ưu tổ hợp. Bài báo về Linear Label Ranking with Bounded Noise cung cấp góc nhìn lý thuyết về khả năng học ranking khi dữ liệu có nhiễu.
+
+Nhìn chung, các bài báo đều nhấn mạnh cùng một ý tưởng cốt lõi: chất lượng của mô hình ranking không chỉ nằm ở việc dự đoán đúng từng điểm riêng lẻ, mà nằm ở việc bảo toàn đúng quan hệ thứ tự giữa các đối tượng. Đây cũng chính là tinh thần xuyên suốt của chương về learning-to-rank.

@@ -1,8 +1,33 @@
 \section{RankBoost}
+\label{sec:rankboost}
 
 Trong các phần trước, ta đã trình bày score-based ranking và thuật toán ranking dựa trên SVM. Một hướng tiếp cận khác trong score-based ranking là sử dụng boosting. Phần này trình bày RankBoost, một thuật toán boosting được thiết kế cho bài toán ranking theo từng cặp.
 
 Tương tự AdaBoost trong phân loại nhị phân, RankBoost kết hợp nhiều mô hình yếu, gọi là \textit{base rankers}, để tạo thành một hàm ranking mạnh hơn. Khác với AdaBoost, RankBoost duy trì phân phối trọng số trên các cặp đối tượng. Các cặp bị xếp sai ở những vòng trước sẽ được tăng trọng số, khiến thuật toán tập trung nhiều hơn vào các cặp khó ở những vòng sau.
+
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}[>=Stealth, node distance=1.25cm]
+        \node[draw, rounded corners, fill=gray!10, align=center, minimum width=3.2cm, minimum height=1.05cm] (dist)
+        {Phân phối trên cặp\\ \(D_t(i)\)};
+        \node[draw, rounded corners, fill=gray!10, align=center, minimum width=3.2cm, minimum height=1.05cm, right=of dist] (weak)
+        {Chọn base ranker\\ \(h_t\)};
+        \node[draw, rounded corners, fill=gray!10, align=center, minimum width=3.2cm, minimum height=1.05cm, right=of weak] (alpha)
+        {Tính trọng số\\ \(\alpha_t\)};
+        \node[draw, rounded corners, fill=gray!10, align=center, minimum width=3.2cm, minimum height=1.05cm, below=1.2cm of weak] (update)
+        {Cập nhật\\ \(D_{t+1}\)};
+        \node[draw, rounded corners, fill=gray!20, align=center, minimum width=3.2cm, minimum height=1.05cm, below=1.2cm of alpha] (final)
+        {Hàm cuối\\ \(g=\sum_t\alpha_t h_t\)};
+
+        \draw[->, thick] (dist) -- (weak);
+        \draw[->, thick] (weak) -- (alpha);
+        \draw[->, thick] (alpha) -- (update);
+        \draw[->, thick] (update) -- (dist);
+        \draw[->, thick] (alpha) -- (final);
+    \end{tikzpicture}
+    \caption{Vòng lặp chính của RankBoost. Ở mỗi vòng, thuật toán chọn một base ranker tốt theo phân phối hiện tại, gán trọng số cho nó, rồi cập nhật phân phối để tập trung hơn vào các cặp khó.}
+    \label{fig:section5-rankboost-loop}
+\end{figure}
 
 \subsection{Thiết lập của RankBoost}
 
@@ -42,6 +67,27 @@ trong đó \(\alpha_t\geq 0\) là trọng số của base ranker \(h_t\). Rankin
 RankBoost hoạt động theo từng vòng. Tại vòng \(t\), thuật toán duy trì một phân phối trọng số \(D_t\) trên các cặp huấn luyện. Sau đó, thuật toán chọn một base ranker \(h_t\) tốt đối với phân phối hiện tại, tính trọng số \(\alpha_t\), rồi cập nhật phân phối thành \(D_{t+1}\).
 
 Trực giác của bước cập nhật là: các cặp được xếp đúng sẽ giảm trọng số tương đối, còn các cặp bị xếp sai sẽ tăng trọng số tương đối. Vì vậy, ở các vòng sau, thuật toán tập trung nhiều hơn vào các cặp khó.
+
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}[>=Stealth]
+        \node[draw, rounded corners, fill=gray!10, align=center, minimum width=3.1cm, minimum height=1.0cm] (correct) at (0,0)
+        {Cặp xếp đúng\\ trọng số giảm};
+        \node[draw, rounded corners, fill=gray!10, align=center, minimum width=3.1cm, minimum height=1.0cm] (tie) at (4.0,0)
+        {Cặp hoà\\ trọng số giữ nguyên};
+        \node[draw, rounded corners, fill=gray!10, align=center, minimum width=3.1cm, minimum height=1.0cm] (wrong) at (8.0,0)
+        {Cặp xếp sai\\ trọng số tăng};
+
+        \node[align=center] (next) at (4,-2.0)
+        {Phân phối \(D_{t+1}\) tập trung hơn\\ vào các cặp khó ở vòng sau};
+
+        \draw[->, thick] (correct.south) -- (next.north west);
+        \draw[->, thick] (tie.south) -- (next.north);
+        \draw[->, thick] (wrong.south) -- (next.north east);
+    \end{tikzpicture}
+    \caption{Trực giác cập nhật trọng số trong RankBoost: cặp xếp sai được tăng trọng số để thuật toán chú ý hơn ở các vòng tiếp theo.}
+    \label{fig:section5-weight-update-intuition}
+\end{figure}
 
 \subsection{Phân phối trọng số trên các cặp}
 
@@ -115,6 +161,22 @@ Ba đại lượng này lần lượt là tổng trọng số của các cặp �
     1.
 \]
 
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}
+        \draw[thick] (0,0) rectangle (10,0.9);
+        \fill[gray!15] (0,0) rectangle (5.2,0.9);
+        \fill[gray!35] (5.2,0) rectangle (7.2,0.9);
+        \fill[gray!55] (7.2,0) rectangle (10,0.9);
+        \node at (2.6,0.45) {\(\epsilon_t^+\): xếp đúng};
+        \node at (6.2,0.45) {\(\epsilon_t^-\): xếp sai};
+        \node at (8.6,0.45) {\(\epsilon_t^0\): hoà};
+        \node[below] at (5,-0.15) {\(\epsilon_t^+ + \epsilon_t^- + \epsilon_t^0 = 1\)};
+    \end{tikzpicture}
+    \caption{Phân phối trọng số \(D_t\) được chia thành ba nhóm: tổng trọng số của cặp xếp đúng, cặp xếp sai và cặp hoà.}
+    \label{fig:section5-epsilon-decomposition}
+\end{figure}
+
 RankBoost chọn base ranker sao cho \(\epsilon_t^{-}-\epsilon_t^{+}\) nhỏ nhất, tức là ưu tiên base ranker có trọng số xếp đúng lớn và trọng số xếp sai nhỏ. Edge của base ranker được định nghĩa là:
 \begin{equation}
     \gamma_t
@@ -138,6 +200,22 @@ Sau khi chọn được \(h_t\), RankBoost gán cho nó trọng số:
 \end{equation}
 
 Nếu \(\epsilon_t^{+}>\epsilon_t^{-}\), thì \(\alpha_t>0\). Base ranker càng tốt, tức là \(\epsilon_t^{+}\) càng lớn so với \(\epsilon_t^{-}\), thì \(\alpha_t\) càng lớn. Vì vậy, các base rankers mạnh hơn sẽ có ảnh hưởng lớn hơn trong hàm điểm cuối cùng \(g\).
+
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}[>=Stealth]
+        \draw[->, thick] (0,0) -- (8,0) node[right] {\(\epsilon_t^+/\epsilon_t^-\)};
+        \draw[->, thick] (0,-1.5) -- (0,2.0) node[above] {\(\alpha_t\)};
+        \draw[domain=0.35:7.5, smooth, variable=\x, thick]
+            plot ({\x},{0.7213*ln(\x)});
+        \draw[dashed] (1,-1.5) -- (1,2.0);
+        \node[below] at (1,0) {\(1\)};
+        \node[right] at (5.2,1.25) {\(\alpha_t=\frac12\log(\epsilon_t^+/\epsilon_t^-)\)};
+        \node[align=center] at (2.2,-1.0) {\(\epsilon_t^+>\epsilon_t^-\)\\ \(\Rightarrow \alpha_t>0\)};
+    \end{tikzpicture}
+    \caption{Trọng số \(\alpha_t\) tăng khi base ranker xếp đúng nhiều hơn xếp sai theo phân phối hiện tại.}
+    \label{fig:section5-alpha-ratio}
+\end{figure}
 
 \subsection{Cập nhật phân phối trọng số}
 
@@ -174,6 +252,15 @@ trong đó \(Z_t\) là hệ số chuẩn hoá:
 \end{equation}
 
 Hệ số \(Z_t\) đảm bảo \(D_{t+1}\) vẫn là một phân phối. Nếu cặp thứ \(i\) được xếp đúng, trọng số của nó được nhân với \(e^{-\alpha_t}\). Nếu cặp đó bị xếp sai, trọng số được nhân với \(e^{\alpha_t}\). Nếu cặp bị hoà, hệ số nhân là \(1\).
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.82\textwidth]{..figures/sec5_weight_update_effect.pdf}
+    \caption{Ảnh hưởng của \(\alpha\) lên hệ số nhân trọng số trong RankBoost. Khi \(\alpha\) tăng, cặp xếp đúng được giảm trọng số theo \(e^{-\alpha}\), cặp xếp sai được tăng trọng số theo \(e^\alpha\), còn cặp hoà giữ nguyên hệ số \(1\).}
+    \label{fig:section5-alpha-weight-update}
+\end{figure}
+
+Hình~\ref{fig:section5-alpha-weight-update} cho thấy rõ vai trò của \(\alpha_t\). Khi base ranker tốt hơn, \(\alpha_t\) lớn hơn, làm cho các cặp xếp sai được phóng đại trọng số mạnh hơn ở vòng sau. Ngược lại, các cặp đã được xếp đúng bị giảm trọng số, vì chúng không còn là trọng tâm chính của thuật toán.
 
 Vì \(\alpha_t>0\), các cặp bị xếp sai được tăng trọng số tương đối, còn các cặp được xếp đúng bị giảm trọng số tương đối. Đây là cơ chế giúp RankBoost tập trung vào các cặp khó hơn qua từng vòng.
 
@@ -303,6 +390,21 @@ thì:
     \exp(-2\gamma^2T).
     \label{eq:section5-rankboost-exponential-bound}
 \end{equation}
+
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}[>=Stealth]
+        \draw[->, thick] (0,0) -- (8.5,0) node[right] {số vòng \(T\)};
+        \draw[->, thick] (0,0) -- (0,4.2) node[above] {\(\widehat{R}(g)\)};
+        \draw[domain=0:8, smooth, variable=\x, thick]
+            plot ({\x},{3.6*exp(-0.32*\x)});
+        \node[right] at (4.5,1.0) {\(\widehat{R}(g)\leq e^{-2\gamma^2T}\)};
+        \draw[dashed] (0,3.6) -- (8,0.28);
+        \node[align=center] at (5.6,3.2) {edge dương qua nhiều vòng\\ \(\Rightarrow\) lỗi giảm theo hàm mũ};
+    \end{tikzpicture}
+    \caption{Nếu mỗi vòng tìm được base ranker có edge dương, chặn trên của lỗi thực nghiệm giảm theo hàm mũ theo số vòng boosting.}
+    \label{fig:section5-exponential-error-bound}
+\end{figure}
 
 Định lý cho thấy nếu mỗi vòng boosting tìm được một base ranker có edge dương ít nhất \(\gamma\), lỗi thực nghiệm của RankBoost giảm theo hàm mũ theo số vòng \(T\). Đây là tính chất tương tự AdaBoost trong bài toán phân loại nhị phân.
 
@@ -468,6 +570,23 @@ trong đó:
 
 Hàm \(F(\alpha)\) là một chặn lồi của lỗi pairwise misranking dạng chỉ thị. Ở mỗi vòng, RankBoost chọn base ranker \(h_t\) tương ứng với một hướng toạ độ làm giảm nhanh nhất hàm \(F\). Sau đó, hệ số \(\alpha_t\) được chọn để tối thiểu hoá \(F\) theo hướng đó. Vì vậy, RankBoost có thể được xem là coordinate descent trong không gian các tổ hợp tuyến tính của base rankers.
 
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}[>=Stealth, node distance=1.2cm]
+        \node[draw, rounded corners, fill=gray!10, align=center, minimum width=3.4cm, minimum height=1cm] (obj)
+        {Hàm mục tiêu\\ \(F(\alpha)\)};
+        \node[draw, rounded corners, fill=gray!10, align=center, minimum width=3.4cm, minimum height=1cm, right=of obj] (coord)
+        {Chọn toạ độ\\ \(h_t\)};
+        \node[draw, rounded corners, fill=gray!10, align=center, minimum width=3.4cm, minimum height=1cm, right=of coord] (step)
+        {Tối ưu bước\\ \(\alpha_t\)};
+        \draw[->, thick] (obj) -- (coord);
+        \draw[->, thick] (coord) -- (step);
+        \draw[->, thick, bend left=35] (step.north) to node[above] {lặp lại} (obj.north);
+    \end{tikzpicture}
+    \caption{Góc nhìn coordinate descent: RankBoost chọn một hướng \(h_t\) rồi tối ưu hệ số \(\alpha_t\) theo hướng đó.}
+    \label{fig:section5-coordinate-descent-view}
+\end{figure}
+
 \subsection{Ví dụ minh hoạ}
 
 Xét ba tài liệu \(d_1,d_2,d_3\) với thứ tự đúng:
@@ -502,6 +621,23 @@ Khi đó, cặp \((d_2,d_1)\) bị hoà vì \(h_1(d_1)-h_1(d_2)=0\), còn hai c�
     \epsilon_1^{0}=\frac{1}{3}.
 \]
 
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}
+        \matrix[matrix of nodes,
+                nodes={draw, minimum width=3.0cm, minimum height=0.8cm, align=center},
+                column sep=-\pgflinewidth,
+                row sep=-\pgflinewidth] (m) {
+            Cặp & Hiệu \(h_1(x')-h_1(x)\) & Nhóm \\
+            \((d_2,d_1,+1)\) & \(1-1=0\) & hoà \\
+            \((d_3,d_1,+1)\) & \(1-0=1\) & đúng \\
+            \((d_3,d_2,+1)\) & \(1-0=1\) & đúng \\
+        };
+    \end{tikzpicture}
+    \caption{Ví dụ phân loại ba cặp thành nhóm đúng, sai hoặc hoà theo base ranker \(h_1\).}
+    \label{fig:section5-rankboost-example-table}
+\end{figure}
+
 Ví dụ này cho thấy vai trò của ba nhóm cặp: xếp đúng, xếp sai và hoà điểm. Trong trường hợp \(\epsilon_t^{-}=0\), công thức \(\alpha_t=\frac{1}{2}\log(\epsilon_t^{+}/\epsilon_t^{-})\) không xác định hữu hạn; thực tế có thể xử lý bằng làm trơn nhỏ hoặc dừng sớm nếu không còn cặp bị xếp sai.
 
 \subsection{[MỞ RỘNG] Phân tích độ phức tạp của RankBoost}
@@ -527,14 +663,50 @@ Nếu \(m\) được tạo từ tất cả các cặp của \(n\) đối tượn
 
 Khi đó, chi phí tổng quát có thể trở thành \(O(Tn^2)\), còn bộ nhớ để lưu phân phối trên các cặp là \(O(n^2)\). Điều này cho thấy RankBoost có thể gặp khó khăn khi số lượng cặp rất lớn, và là động lực để xét các phiên bản hiệu quả hơn trong bipartite ranking.
 
+\begin{table}[H]
+    \centering
+    \begin{tabular}{lll}
+        \toprule
+        \textbf{Thao tác} & \textbf{Chi phí} & \textbf{Ghi chú} \\
+        \midrule
+        Tính \(\epsilon_t^+,\epsilon_t^-,\epsilon_t^0\) & \(O(m)\) & Duyệt qua toàn bộ cặp \\
+        Cập nhật \(D_{t+1}\) & \(O(m)\) & Chuẩn hoá bằng \(Z_t\) \\
+        Một vòng boosting & \(O(m)\) & Chưa tính chi phí tìm \(h_t\) \\
+        \(T\) vòng boosting & \(O(Tm)\) & Nếu \(m=O(n^2)\), chi phí là \(O(Tn^2)\) \\
+        \bottomrule
+    \end{tabular}
+    \caption{Tóm tắt độ phức tạp của RankBoost trong thiết lập pairwise tổng quát.}
+    \label{tab:section5-rankboost-complexity}
+\end{table}
+
 \subsection{Liên hệ với AdaBoost}
 
 RankBoost có quan hệ chặt chẽ với AdaBoost. Cả hai thuật toán đều duy trì một phân phối trọng số, chọn một weak learner tại mỗi vòng, gán trọng số cho weak learner đó và cập nhật phân phối để tập trung vào các mẫu khó.
 
 Điểm khác biệt chính là AdaBoost duy trì trọng số trên từng điểm dữ liệu \((x_i,y_i)\), còn RankBoost duy trì trọng số trên từng cặp \((x_i,x'_i,y_i)\). Vì vậy, AdaBoost cố gắng giảm lỗi phân loại từng điểm, còn RankBoost cố gắng giảm lỗi xếp hạng theo từng cặp.
 
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}[>=Stealth, node distance=1.4cm]
+        \node[draw, rounded corners, fill=gray!10, align=center, minimum width=4cm, minimum height=1.1cm] (ada)
+        {AdaBoost\\ trọng số trên điểm\\ \((x_i,y_i)\)};
+        \node[draw, rounded corners, fill=gray!10, align=center, minimum width=4cm, minimum height=1.1cm, right=2cm of ada] (rank)
+        {RankBoost\\ trọng số trên cặp\\ \((x_i,x'_i,y_i)\)};
+        \node[align=center, below=1.0cm of ada] (adaobj)
+        {giảm lỗi phân loại};
+        \node[align=center, below=1.0cm of rank] (rankobj)
+        {giảm lỗi xếp hạng theo cặp};
+        \draw[->, thick] (ada) -- (adaobj);
+        \draw[->, thick] (rank) -- (rankobj);
+    \end{tikzpicture}
+    \caption{AdaBoost và RankBoost có cùng tinh thần boosting, nhưng khác nhau ở đối tượng được gán trọng số.}
+    \label{fig:section5-adaboost-rankboost}
+\end{figure}
+
 \subsection{Tóm tắt}
 
 RankBoost là một thuật toán boosting cho bài toán ranking theo từng cặp. Thuật toán duy trì phân phối trọng số trên các cặp huấn luyện, chọn base ranker có khả năng xếp đúng các cặp có trọng số lớn, sau đó cập nhật phân phối để tập trung vào các cặp bị xếp sai. Hàm ranking cuối cùng là tổ hợp tuyến tính của các base rankers.
+
+Các hình trong phần này nhấn mạnh ba ý chính. Thứ nhất, RankBoost hoạt động theo vòng lặp chọn base ranker, tính \(\alpha_t\), rồi cập nhật phân phối. Thứ hai, hệ số \(\alpha_t\) điều khiển mức tăng hoặc giảm trọng số của các cặp sau mỗi vòng. Thứ ba, nếu mỗi vòng có edge dương, chặn trên của lỗi thực nghiệm giảm theo hàm mũ theo số vòng boosting.
 
 Kết quả lý thuyết quan trọng của RankBoost là lỗi thực nghiệm giảm theo hàm mũ nếu tại mỗi vòng tồn tại một base ranker có edge dương. Ngoài ra, RankBoost có thể được hiểu như coordinate descent trên một hàm mục tiêu lồi dạng exponential loss. Phân tích này tạo nền tảng cho phần tiếp theo, nơi ta xét trường hợp đặc biệt nhưng rất quan trọng của ranking: bipartite ranking.

@@ -1,0 +1,27 @@
+\section{Kết luận}
+
+Chương này đã trình bày tổng quan về bài toán \textit{learning-to-rank}, từ các khái niệm nền tảng đến một số thuật toán, tiêu chí đánh giá, thực nghiệm minh hoạ và các hướng nghiên cứu liên quan. Khác với bài toán phân loại hoặc hồi quy thông thường, ranking không chỉ quan tâm đến dự đoán trên từng đối tượng riêng lẻ, mà tập trung vào quan hệ thứ tự giữa các đối tượng. Đây là điểm làm cho ranking trở thành một bài toán quan trọng trong nhiều ứng dụng như truy xuất thông tin, công cụ tìm kiếm, hệ gợi ý, phát hiện gian lận và ra quyết định tối ưu.
+
+Trước hết, chương đã giới thiệu các thiết lập cơ bản của ranking, bao gồm \textit{score-based ranking} và \textit{preference-based ranking}. Trong score-based ranking, mô hình học một hàm điểm
+\[
+    h:\mathcal{X}\rightarrow\mathbb{R},
+\]
+sau đó sinh ranking bằng cách sắp xếp các đối tượng theo điểm số. Trong preference-based ranking, mô hình học trực tiếp quan hệ ưu tiên giữa từng cặp đối tượng. Hai thiết lập này cho thấy ranking có thể được tiếp cận theo nhiều cách khác nhau, tuỳ thuộc vào dạng dữ liệu huấn luyện và mục tiêu ứng dụng.
+
+Tiếp theo, chương đã trình bày các khái niệm lý thuyết quan trọng như lỗi xếp hạng theo từng cặp, margin, pairwise loss và chặn tổng quát hoá dựa trên Rademacher complexity. Các kết quả này cho thấy để một mô hình ranking có khả năng tổng quát hoá tốt, ta cần đồng thời kiểm soát lỗi thực nghiệm và độ phức tạp của lớp giả thuyết. Đây là cơ sở lý thuyết cho các phương pháp ranking dựa trên margin.
+
+Dựa trên các ý tưởng đó, chương đã trình bày hai thuật toán tiêu biểu là \textit{Ranking SVM} và \textit{RankBoost}. Ranking SVM chuyển bài toán ranking theo từng cặp thành một bài toán phân loại nhị phân trên các vector hiệu, từ đó tận dụng được nguyên lý margin của SVM. RankBoost sử dụng tư tưởng boosting, duy trì trọng số trên các cặp đối tượng và tập trung dần vào các cặp khó. Hai thuật toán này minh hoạ rõ cách các bài toán ranking có thể được giải quyết bằng cách chuyển về các bài toán học máy quen thuộc hơn.
+
+Chương cũng đã xét trường hợp đặc biệt \textit{bipartite ranking}, trong đó mục tiêu là xếp các điểm positive cao hơn các điểm negative. Trong thiết lập này, AUC là một độ đo tự nhiên vì nó có thể được hiểu là xác suất một điểm positive được xếp cao hơn một điểm negative. Khi bỏ qua trường hợp hoà điểm, ta có quan hệ quan trọng:
+\[
+    \mathrm{AUC}(h)=1-R(h),
+\]
+trong đó \(R(h)\) là ranking loss trong bipartite ranking. Quan hệ này cho thấy AUC không chỉ là một metric thực nghiệm, mà còn có diễn giải trực tiếp dưới góc nhìn pairwise ranking.
+
+Bên cạnh đó, chương đã thảo luận nhiều tiêu chí đánh giá ranking như pairwise accuracy, ranking loss, Kendall tau distance, AUC, Precision@\(k\), MAP, MRR và NDCG. Mỗi tiêu chí phản ánh một khía cạnh khác nhau của chất lượng ranking. Các tiêu chí pairwise phù hợp với phân tích lý thuyết và các mô hình học theo cặp, trong khi các tiêu chí như NDCG, MAP và MRR phù hợp hơn với các hệ thống truy xuất thông tin thực tế, nơi các vị trí đầu danh sách có vai trò đặc biệt quan trọng.
+
+Phần thực nghiệm đã minh hoạ một mô hình pairwise ranking tuyến tính được cài đặt từ đầu bằng Python và NumPy. Kết quả cho thấy mô hình có thể học tốt quan hệ ưu tiên khi dữ liệu được sinh từ một hàm tuyến tính và mức nhiễu không quá lớn. Thí nghiệm cũng cho thấy khi nhiễu tăng, chất lượng ranking giảm rõ rệt; trong khi khi kích thước mẫu tăng, mô hình có xu hướng học ổn định hơn. Các kết quả này phù hợp với lý thuyết: ranking tốt đòi hỏi mô hình bảo toàn được càng nhiều quan hệ ưu tiên theo cặp càng tốt.
+
+Cuối cùng, chương đã tổng hợp một số bài báo liên quan để cho thấy learning-to-rank vẫn là một hướng nghiên cứu đang phát triển mạnh. Các nghiên cứu hiện đại không chỉ dừng lại ở pairwise loss cổ điển, mà còn hướng đến tối ưu trực tiếp các metric như NDCG, MAP, MRR, mở rộng ranking sang decision-focused learning, và xây dựng bảo đảm lý thuyết cho label ranking trong điều kiện có nhiễu. Điều này cho thấy learning-to-rank vừa có nền tảng lý thuyết phong phú, vừa có nhiều ứng dụng thực tiễn.
+
+Tóm lại, learning-to-rank là một bài toán trung tâm trong học máy hiện đại, đặc biệt khi mục tiêu không chỉ là dự đoán đúng từng điểm dữ liệu mà là tạo ra một thứ tự có ý nghĩa. Các mô hình và lý thuyết trong chương cho thấy bản chất của ranking nằm ở việc học và bảo toàn quan hệ ưu tiên giữa các đối tượng. Đây cũng là nền tảng để phát triển các hệ thống ranking hiệu quả hơn trong thực tế, đặc biệt trong những ứng dụng mà chất lượng của các vị trí đầu danh sách có ảnh hưởng trực tiếp đến trải nghiệm người dùng và giá trị của hệ thống.
