@@ -410,17 +410,18 @@ thì:
 
 \subsection{Chứng minh Định lý 5.1}
 
-Ta chỉ trình bày ý tưởng chính của chứng minh. Sử dụng bất đẳng thức:
+Đặt margin tích luỹ của hàm cuối \(g\) trên cặp thứ \(i\) là
+\[
+    u_i
+    =
+    y_i
+    \big(g(x'_i)-g(x_i)\big).
+\]
+Nếu cặp thứ \(i\) bị xếp sai hoặc hoà thì \(u_i\leq 0\). Sử dụng bất đẳng thức
 \[
     \mathbf{1}[u\leq 0]\leq \exp(-u),
     \qquad
     \forall u\in\mathbb{R},
-\]
-với
-\[
-    u_i=
-    y_i
-    \big(g(x'_i)-g(x_i)\big),
 \]
 ta có:
 \[
@@ -435,14 +436,79 @@ ta có:
     \right).
 \]
 
-Từ công thức~\eqref{eq:section5-distribution-closed-form} với \(t=T\), suy ra:
+Ta chứng minh liên hệ giữa tổng mũ ở vế phải và các hệ số chuẩn hoá \(Z_t\). Từ quy tắc cập nhật:
+\[
+    D_{t+1}(i)
+    =
+    \frac{
+        D_t(i)
+        \exp
+        \left(
+            -\alpha_t
+            y_i
+            \big(h_t(x'_i)-h_t(x_i)\big)
+        \right)
+    }{
+        Z_t
+    },
+\]
+và \(D_1(i)=1/m\), khai triển đệ quy cho \(t=1,\ldots,T\) cho ta:
+\[
+    D_{T+1}(i)
+    =
+    \frac{
+        \exp
+        \left(
+            -y_i
+            \sum_{t=1}^{T}
+            \alpha_t
+            \big(h_t(x'_i)-h_t(x_i)\big)
+        \right)
+    }{
+        m\prod_{t=1}^{T} Z_t
+    }.
+\]
+Vì \(g(x)=\sum_{t=1}^{T}\alpha_t h_t(x)\), công thức trên trở thành:
+\[
+    D_{T+1}(i)
+    =
+    \frac{
+        \exp
+        \left(
+            -y_i
+            \big(g(x'_i)-g(x_i)\big)
+        \right)
+    }{
+        m\prod_{t=1}^{T} Z_t
+    }.
+\]
+Lấy tổng theo \(i\) và dùng \(\sum_i D_{T+1}(i)=1\), ta suy ra:
+\[
+    \frac{1}{m}
+    \sum_{i=1}^{m}
+    \exp
+    \left(
+        -y_i
+        \big(g(x'_i)-g(x_i)\big)
+    \right)
+    =
+    \prod_{t=1}^{T}Z_t.
+\]
+Do đó:
 \[
     \widehat{R}(g)
     \leq
     \prod_{t=1}^{T}Z_t.
 \]
 
-Tiếp theo, chia các cặp thành ba nhóm được xếp đúng, xếp sai và hoà, ta có:
+Tiếp theo, ta chặn từng \(Z_t\). Tại vòng \(t\), đặt
+\[
+    r_i^{(t)}
+    =
+    y_i
+    \big(h_t(x'_i)-h_t(x_i)\big).
+\]
+Vì base ranker nhận giá trị trong \(\{0,1\}\), ta có \(r_i^{(t)}\in\{-1,0,+1\}\). Chia các cặp thành ba nhóm đúng, sai và hoà theo giá trị của \(r_i^{(t)}\), ta được:
 \[
     Z_t
     =
@@ -470,20 +536,87 @@ ta thu được:
     \epsilon_t^{0}.
 \]
 
-Sử dụng các bước chặn chuẩn trong phân tích RankBoost, ta có:
+Ta đặt
+\[
+    a_t=\epsilon_t^{+}+\epsilon_t^{-},
+    \qquad
+    d_t=\epsilon_t^{+}-\epsilon_t^{-}.
+\]
+Khi đó \(\epsilon_t^0=1-a_t\) và
+\[
+    4\epsilon_t^{+}\epsilon_t^{-}
+    =
+    a_t^2-d_t^2.
+\]
+Vì vậy:
+\[
+\begin{aligned}
+    Z_t
+    &=
+    \epsilon_t^{0}
+    +
+    2\sqrt{\epsilon_t^{+}\epsilon_t^{-}}\\
+    &=
+    1-a_t+\sqrt{a_t^2-d_t^2}\\
+    &=
+    1-a_t+a_t\sqrt{1-\frac{d_t^2}{a_t^2}}.
+\end{aligned}
+\]
+Với \(0\leq x\leq 1\), ta có \(\sqrt{1-x}\leq 1-x/2\). Áp dụng cho \(x=d_t^2/a_t^2\), suy ra:
+\[
+\begin{aligned}
+    Z_t
+    &\leq
+    1-a_t
+    +
+    a_t
+    \left(
+        1-\frac{d_t^2}{2a_t^2}
+    \right)\\
+    &=
+    1-\frac{d_t^2}{2a_t}
+    \leq
+    1-\frac{d_t^2}{2}.
+\end{aligned}
+\]
+Bất đẳng thức cuối dùng \(a_t\leq 1\). Theo định nghĩa edge,
+\[
+    \gamma_t
+    =
+    \frac{\epsilon_t^{+}-\epsilon_t^{-}}{2}
+    =
+    \frac{d_t}{2}.
+\]
+Do đó:
+\[
+    Z_t
+    \leq
+    1-2\gamma_t^2.
+\]
+Cuối cùng, vì \(1-x\leq e^{-x}\) với mọi \(x\), ta có:
 \[
     Z_t
     \leq
     \exp
     \left(
         -2
-        \left(
-            \frac{\epsilon_t^{+}-\epsilon_t^{-}}{2}
-        \right)^2
+        \gamma_t^2
     \right).
 \]
+Trường hợp \(a_t=0\) tương ứng với mọi cặp đều bị hoà, khi đó \(\gamma_t=0\), \(Z_t=1\), và chặn trên vẫn đúng. Trường hợp \(\epsilon_t^{-}=0\) có thể hiểu theo giới hạn \(\alpha_t\to+\infty\); chặn vẫn thu được bằng lập luận giới hạn hoặc bằng cách thêm một lượng làm trơn rất nhỏ rồi cho lượng đó tiến về \(0\).
 
 Thay chặn này vào \(\widehat{R}(g)\leq\prod_{t=1}^{T}Z_t\), ta thu được:
+\[
+    \widehat{R}(g)
+    \leq
+    \exp
+    \left(
+        -2
+        \sum_{t=1}^{T}
+        \gamma_t^2
+    \right).
+\]
+Vì \(\gamma_t=(\epsilon_t^{+}-\epsilon_t^{-})/2\), bất đẳng thức này chính là:
 \[
     \widehat{R}(g)
     \leq

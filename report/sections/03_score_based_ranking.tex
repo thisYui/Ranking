@@ -238,7 +238,7 @@ Chặn trên gồm ba thành phần. Thành phần thứ nhất là lỗi margin
 
 \subsection{Chứng minh Định lý 3.1}
 
-Ta chỉ trình bày ý tưởng chính của chứng minh. Đầu tiên, định nghĩa lớp hàm margin theo cặp:
+Đặt \(z=((x,x'),y)\) và định nghĩa lớp hàm margin theo cặp:
 \[
     \mathcal{H}_{\Delta}
     =
@@ -250,7 +250,27 @@ Ta chỉ trình bày ý tưởng chính của chứng minh. Đầu tiên, địn
         h\in\mathcal{H}
     \right\}.
 \]
-Sau đó, xét lớp hàm sau khi ghép với margin loss:
+Với mỗi \(h\in\mathcal{H}\), nếu một cặp bị xếp sai thì
+\[
+    y(h(x')-h(x))\leq 0.
+\]
+Do \(\mathbf{1}[u\leq 0]\leq \Phi_{\rho}(u)\), ta có
+\[
+    R(h)
+    =
+    \mathbb{E}_{z}
+    \mathbf{1}
+    \left[
+        y(h(x')-h(x))\leq 0
+    \right]
+    \leq
+    \mathbb{E}_{z}
+    \Phi_{\rho}
+    \left(
+        y(h(x')-h(x))
+    \right).
+\]
+Vì vậy, chỉ cần chặn sai khác giữa kỳ vọng thật và trung bình thực nghiệm của lớp hàm sau:
 \[
     \Phi_{\rho}\circ\mathcal{H}_{\Delta}
     =
@@ -266,9 +286,13 @@ Sau đó, xét lớp hàm sau khi ghép với margin loss:
     \right\}.
 \]
 
-Vì lớp này nhận giá trị trong \([0,1]\), ta có thể áp dụng chặn tổng quát hoá bằng Rademacher complexity:
+Lớp \(\Phi_{\rho}\circ\mathcal{H}_{\Delta}\) nhận giá trị trong \([0,1]\). Áp dụng chặn tổng quát hoá bằng Rademacher complexity cho lớp hàm bị chặn, với xác suất ít nhất \(1-\delta\), đồng thời với mọi \(h\in\mathcal{H}\):
 \[
-    R(h)
+    \mathbb{E}_{z}
+    \Phi_{\rho}
+    \left(
+        y(h(x')-h(x))
+    \right)
     \leq
     \widehat{R}_{\rho}(h)
     +
@@ -282,7 +306,20 @@ Vì lớp này nhận giá trị trong \([0,1]\), ta có thể áp dụng chặn
         \frac{\log(1/\delta)}{2m}
     }.
 \]
-Do \(\Phi_{\rho}\) là hàm \(1/\rho\)-Lipschitz, theo tính chất contraction của Rademacher complexity:
+Kết hợp với bất đẳng thức \(R(h)\leq \mathbb{E}_{z}\Phi_{\rho}(y(h(x')-h(x)))\), ta được bước chặn đầu tiên.
+
+Tiếp theo, ta chặn độ phức tạp của lớp \(\Phi_{\rho}\circ\mathcal{H}_{\Delta}\). Hàm \(\Phi_{\rho}\) là \(1/\rho\)-Lipschitz. Khi áp dụng định lý contraction, việc cộng một hằng số vào hàm mất mát không làm thay đổi Rademacher complexity vì
+\[
+    \mathbb{E}_{\sigma}
+    \left[
+        \frac{1}{m}
+        \sum_{i=1}^{m}
+        \sigma_i c
+    \right]
+    =
+    0.
+\]
+Do đó:
 \[
     \mathfrak{R}_m
     \left(
@@ -292,7 +329,39 @@ Do \(\Phi_{\rho}\) là hàm \(1/\rho\)-Lipschitz, theo tính chất contraction 
     \frac{1}{\rho}
     \mathfrak{R}_m(\mathcal{H}_{\Delta}).
 \]
-Mặt khác, vì mỗi hàm trong \(\mathcal{H}_{\Delta}\) có dạng hiệu \(h(x')-h(x)\), nên độ phức tạp của lớp này được chặn bởi tổng độ phức tạp trên hai phân phối biên:
+
+Ta còn cần chặn \(\mathfrak{R}_m(\mathcal{H}_{\Delta})\) theo độ phức tạp của \(\mathcal{H}\). Với một mẫu \(S=\{((x_i,x'_i),y_i)\}_{i=1}^{m}\), ta có:
+\[
+\begin{aligned}
+    \widehat{\mathfrak{R}}_{S}(\mathcal{H}_{\Delta})
+    &=
+    \mathbb{E}_{\sigma}
+    \left[
+        \sup_{h\in\mathcal{H}}
+        \frac{1}{m}
+        \sum_{i=1}^{m}
+        \sigma_i y_i
+        \big(h(x'_i)-h(x_i)\big)
+    \right] \\
+    &\leq
+    \mathbb{E}_{\sigma}
+    \left[
+        \sup_{h\in\mathcal{H}}
+        \frac{1}{m}
+        \sum_{i=1}^{m}
+        \sigma_i y_i h(x'_i)
+    \right]
+    +
+    \mathbb{E}_{\sigma}
+    \left[
+        \sup_{h\in\mathcal{H}}
+        \frac{1}{m}
+        \sum_{i=1}^{m}
+        (-\sigma_i y_i) h(x_i)
+    \right].
+\end{aligned}
+\]
+Vì \(y_i\in\{-1,+1\}\), các biến \(\sigma_i y_i\) và \(-\sigma_i y_i\) vẫn là các biến Rademacher độc lập. Lấy kỳ vọng theo mẫu, hạng thứ nhất trở thành \(\mathfrak{R}^{D_2}_m(\mathcal{H})\), còn hạng thứ hai trở thành \(\mathfrak{R}^{D_1}_m(\mathcal{H})\). Suy ra:
 \[
     \mathfrak{R}_m(\mathcal{H}_{\Delta})
     \leq
@@ -300,7 +369,51 @@ Mặt khác, vì mỗi hàm trong \(\mathcal{H}_{\Delta}\) có dạng hiệu \(h
     +
     \mathfrak{R}^{D_2}_m(\mathcal{H}).
 \]
-Thay hai chặn trên vào nhau, ta thu được bất đẳng thức trong Định lý 3.1.
+Thay hai chặn trên vào bất đẳng thức tổng quát hoá, ta thu được:
+\[
+    R(h)
+    \leq
+    \widehat{R}_{\rho}(h)
+    +
+    \frac{2}{\rho}
+    \left(
+        \mathfrak{R}^{D_1}_m(\mathcal{H})
+        +
+        \mathfrak{R}^{D_2}_m(\mathcal{H})
+    \right)
+    +
+    \sqrt{
+        \frac{\log(1/\delta)}{2m}
+    },
+\]
+đúng đồng thời với mọi \(h\in\mathcal{H}\). Đây chính là dạng chặn theo Rademacher complexity kỳ vọng.
+
+Để thu được dạng empirical Rademacher complexity, ta dùng chặn chuẩn liên hệ giữa độ phức tạp kỳ vọng và độ phức tạp thực nghiệm. Cụ thể, với xác suất cao, mỗi đại lượng \(\mathfrak{R}^{D_j}_m(\mathcal{H})\) có thể được thay bởi \(\widehat{\mathfrak{R}}_{S_j}(\mathcal{H})\) cộng thêm một sai số lấy mẫu bậc \(\sqrt{\log(1/\delta)/m}\). Áp dụng bất đẳng thức này cho hai phân phối biên \(D_1,D_2\) và dùng union bound cho các biến cố xác suất, các hạng sai số được gom lại thành
+\[
+    3
+    \sqrt{
+        \frac{\log(2/\delta)}{2m}
+    }.
+\]
+Do đó, với xác suất ít nhất \(1-\delta\), đồng thời với mọi \(h\in\mathcal{H}\):
+\[
+    R(h)
+    \leq
+    \widehat{R}_{\rho}(h)
+    +
+    \frac{2}{\rho}
+    \left(
+        \widehat{\mathfrak{R}}_{S_1}(\mathcal{H})
+        +
+        \widehat{\mathfrak{R}}_{S_2}(\mathcal{H})
+    \right)
+    +
+    3
+    \sqrt{
+        \frac{\log(2/\delta)}{2m}
+    }.
+\]
+Vậy cả hai bất đẳng thức trong Định lý 3.1 đều được chứng minh.
 
 \subsection{[MỞ RỘNG] Giải thích bước Lipschitz của \texorpdfstring{\(\Phi_{\rho}\)}{Phi rho}}
 

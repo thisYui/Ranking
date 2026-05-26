@@ -31,7 +31,7 @@ def pairwise_hinge_loss_and_grad(
 
     grad = np.zeros_like(model.w)
     if np.any(violations):
-        grad = np.mean((-labels[violations, None]) * diffs[violations], axis=0)
+        grad = np.sum((-labels[violations, None]) * diffs[violations], axis=0) / len(pairs)
 
     loss += 0.5 * reg * float(model.w @ model.w)
     grad += reg * model.w
