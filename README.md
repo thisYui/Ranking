@@ -233,6 +233,7 @@ pip install pytest
 
 ### 5.6. Ghi chú tái tạo
 
+- Nên sử dụng môi trường python 3.12 để tương thích tốt nhất
 - Nên chạy các lệnh từ thư mục `code/`.
 - Các kết quả được lưu trong thư mục `results/`.
 - Code sử dụng random seed mặc định là `42` để hỗ trợ tái tạo kết quả.
